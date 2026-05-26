@@ -37,7 +37,15 @@ jobs:
             texlive-fonts-recommended \
             texlive-fonts-extra \
             lmodern \
-            python3
+            python3 \
+            wget unzip
+          # Install Source Sans 3 and Source Code Pro fonts
+          mkdir -p ~/.fonts
+          wget -qO /tmp/sourcesans.zip https://github.com/adobe-fonts/source-sans/releases/download/3.052R/TTF-source-sans-3.052R.zip
+          wget -qO /tmp/sourcecode.zip https://github.com/adobe-fonts/source-code-pro/releases/download/2.042R-u%2F1.062R-i%2F1.026R-vf/TTF-source-code-pro-2.042R-u_1.062R-i.zip
+          unzip -qo /tmp/sourcesans.zip -d ~/.fonts/
+          unzip -qo /tmp/sourcecode.zip -d ~/.fonts/
+          fc-cache -f ~/.fonts/
 
       - name: Build resume
         run: ./build_resume.sh example/resume.md

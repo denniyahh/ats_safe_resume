@@ -17,8 +17,8 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install TeX Live (minimal set for resume builds), Pandoc, fonts, Python
-RUN    apt-get update && apt-get install -y --no-install-recommends \
+# Install TeX Live (minimal set for resume builds), Pandoc, Python, fonts
+RUN apt-get update && apt-get install -y --no-install-recommends \
     # Pandoc (from Ubuntu repos — stable, no need for bleeding edge)
     pandoc \
     # TeX Live: base + LuaLaTeX + KOMA-script + fontspec + enumitem
@@ -31,9 +31,18 @@ RUN    apt-get update && apt-get install -y --no-install-recommends \
     lmodern \
     # Python (ATS normalization, JSON generation)
     python3 \
+    # Font download tools
+    wget unzip \
     # Cleanup
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # Install Source Sans 3 and Source Code Pro from GitHub
+    && mkdir -p /usr/local/share/fonts \
+    && wget -qO /tmp/sourcesans.zip https://github.com/adobe-fonts/source-sans/releases/download/3.052R/TTF-source-sans-3.052R.zip \
+    && wget -qO /tmp/sourcecode.zip https://github.com/adobe-fonts/source-code-pro/releases/download/2.042R-u%2F1.062R-i%2F1.026R-vf/TTF-source-code-pro-2.042R-u_1.062R-i.zip \
+    && unzip -qo /tmp/sourcesans.zip -d /usr/local/share/fonts/ \
+    && unzip -qo /tmp/sourcecode.zip -d /usr/local/share/fonts/ \
+    && fc-cache -f /usr/local/share/fonts/
 
 # Copy build system
 WORKDIR /app
