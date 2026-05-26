@@ -31,8 +31,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lmodern \
     # Python (ATS normalization, JSON generation)
     python3 \
-    # Font download tools
-    curl unzip \
+    # Font download tools and TLS support
+    curl ca-certificates unzip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
