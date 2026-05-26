@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Python (ATS normalization, JSON generation)
     python3 \
     # Font download tools and TLS support
-    curl ca-certificates unzip \
+    curl ca-certificates fontconfig unzip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
