@@ -437,14 +437,11 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
         normalize_md_for_ats "$INPUT_MD" "$TMP_DOCX"
         DOCX_INPUT="$TMP_DOCX"
       fi
-      REF_DOC="$SCRIPT_DIR/reference.docx"
-      REF_ARG=""
-      [[ -f "$REF_DOC" ]] && REF_ARG="--reference-doc=$REF_DOC"
       pandoc "$DOCX_INPUT" \
         -o "${OUT_DIR}/${BASENAME}.docx" \
         --metadata=title:"$TITLE" \
         --standalone \
-        $REF_ARG
+        --reference-doc="$SCRIPT_DIR/reference.docx"
 
       [[ -n "${TMP_DOCX}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_DOCX"
       ;;
