@@ -451,8 +451,7 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
       pandoc "$INPUT_MD" \
         -o "${OUT_DIR}/${BASENAME}.html" \
         --metadata=title:"$TITLE" \
-        --standalone \
-        --toc=false
+        --standalone
       ;;
 
     txt)
