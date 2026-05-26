@@ -37,8 +37,6 @@ jobs:
             texlive-fonts-recommended \
             texlive-fonts-extra \
             lmodern \
-            fonts-source-sans-pro \
-            fonts-source-code-pro \
             python3
 
       - name: Build resume

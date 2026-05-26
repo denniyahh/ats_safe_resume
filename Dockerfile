@@ -18,7 +18,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install TeX Live (minimal set for resume builds), Pandoc, fonts, Python
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN    apt-get update && apt-get install -y --no-install-recommends \
     # Pandoc (from Ubuntu repos — stable, no need for bleeding edge)
     pandoc \
     # TeX Live: base + LuaLaTeX + KOMA-script + fontspec + enumitem
@@ -29,9 +29,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     texlive-fonts-extra \
     lmodern \
-    # Fonts: Source Sans 3, Source Code Pro
-    fonts-source-sans-pro \
-    fonts-source-code-pro \
     # Python (ATS normalization, JSON generation)
     python3 \
     # Cleanup
@@ -44,7 +41,7 @@ COPY templates/        /app/templates/
 COPY themes/           /app/themes/
 COPY resume-preamble.tex /app/
 COPY build_resume.sh   /app/
-COPY reference.docx    /app/ 2>/dev/null || true
+COPY reference.docx    /app/
 
 RUN chmod +x /app/build_resume.sh
 
