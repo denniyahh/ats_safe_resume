@@ -22,6 +22,8 @@ jobs:
     name: Build all formats
     runs-on: ubuntu-latest
     needs: lint
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -63,11 +65,12 @@ jobs:
       - name: Commit demo PDF
         if: github.ref == 'refs/heads/main'
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add example/resume.pdf
           git diff --cached --quiet || git commit -m "Update example/resume.pdf [skip ci]"
-          git push
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:main
 
   docker:
     name: Build and publish Docker image
