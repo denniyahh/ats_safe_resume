@@ -1,0 +1,26 @@
+# Build output
+dist/
+
+# Temp files from ATS normalization
+*.tmp
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.sublime-*
+
+# OS junk
+.DS_Store
+Thumbs.db
+.desktop.ini
+
+# Pandoc LaTeX artifacts
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+
+# Keep the example PDF committed for README preview
+# (overwritten by CI on each push)

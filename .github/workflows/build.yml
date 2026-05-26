@@ -1,0 +1,94 @@
+name: Build Resume
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKER_IMAGE: ghcr.io/${{ github.repository_owner }}/ats_safe_resume
+
+jobs:
+  lint:
+    name: Lint build script
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        run: shellcheck build_resume.sh
+
+  build:
+    name: Build all formats
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pandoc \
+            texlive-latex-base \
+            texlive-latex-extra \
+            texlive-latex-recommended \
+            texlive-luatex \
+            texlive-fonts-recommended \
+            texlive-fonts-extra \
+            lmodern \
+            fonts-source-sans-pro \
+            fonts-source-code-pro \
+            python3
+
+      - name: Build resume
+        run: ./build_resume.sh example/resume.md
+
+      - name: Copy demo PDF to tracked location
+        run: cp dist/resume.pdf example/resume.pdf
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: resume-outputs
+          path: dist/
+          retention-days: 90
+
+      - name: Commit demo PDF
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add example/resume.pdf
+          git diff --cached --quiet || git commit -m "Update example/resume.pdf [skip ci]"
+          git push
+
+  docker:
+    name: Build and publish Docker image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
