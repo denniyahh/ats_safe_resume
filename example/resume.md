@@ -10,6 +10,7 @@ mainfont: Source Sans 3
 monofont: Source Code Pro
 theme: dark                      # dark | navy | teal | burgundy | minimal
 page_mode: two                   # one | two — 'one' tightens spacing
+crafted_footer: true             # show "crafted with ats_safe_resume" footer on last page
 disable-header-and-footer: true
 ---
 

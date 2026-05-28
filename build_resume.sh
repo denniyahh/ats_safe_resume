@@ -89,6 +89,7 @@ if not m:
     print('TITLE="Your Name — Resume"')
     print('FONTSIZE="10pt"')
     print('GEOMETRY="left=0.7in,right=0.7in,top=0.5in,bottom=0.5in"')
+    print('CRAFTED_FOOTER="true"')
     sys.exit(0)
 
 # Minimal YAML parser (avoids dependency on PyYAML)
@@ -130,6 +131,7 @@ geometry = result.get('geometry', 'left=0.7in,right=0.7in,top=0.5in,bottom=0.5in
 
 mainfont = result.get('mainfont', 'Source Sans 3')
 monofont = result.get('monofont', 'Source Code Pro')
+crafted_footer = result.get('crafted_footer', 'true')
 
 # Quote values for safe eval in the shell
 print(f"THEME=\"{theme}\"")
@@ -139,6 +141,7 @@ print(f"FONTSIZE=\"{fontsize}\"")
 print(f"GEOMETRY=\"{geometry}\"")
 print(f"MAINFONT=\"{mainfont}\"")
 print(f"MONOFONT=\"{monofont}\"")
+print(f"CRAFTED_FOOTER=\"{crafted_footer}\"")
 PY
 }
 
@@ -442,8 +445,10 @@ echo "Parsing frontmatter from $INPUT_MD..."
 ENV_THEME="${THEME:-}"
 ENV_PAGE_MODE="${PAGE_MODE:-}"
 ENV_FONTSIZE="${FONTSIZE:-}"
+ENV_GEOMETRY="${GEOMETRY:-}"
 ENV_MAINFONT="${MAINFONT:-}"
 ENV_MONOFONT="${MONOFONT:-}"
+ENV_CRAFTED_FOOTER="${CRAFTED_FOOTER:-}"
 
 eval "$(parse_frontmatter)"
 
@@ -451,15 +456,17 @@ eval "$(parse_frontmatter)"
 THEME="${ENV_THEME:-${THEME:-dark}}"
 PAGE_MODE="${ENV_PAGE_MODE:-${PAGE_MODE:-two}}"
 FONTSIZE="${ENV_FONTSIZE:-${FONTSIZE:-10pt}}"
-GEOMETRY="${ENV_GEOMETRY:-${GEOMETRY:-left=0.7in,right=0.7in,top=0.5in,bottom=0.5in}}"
 MAINFONT="${ENV_MAINFONT:-${MAINFONT:-Source Sans 3}}"
 MONOFONT="${ENV_MONOFONT:-${MONOFONT:-Source Code Pro}}"
+CRAFTED_FOOTER="${ENV_CRAFTED_FOOTER:-${CRAFTED_FOOTER:-true}}"
+GEOMETRY="${ENV_GEOMETRY:-${GEOMETRY:-left=0.7in,right=0.7in,top=0.5in,bottom=0.5in}}"
 
 echo "  Theme:      $THEME"
 echo "  Page mode:  $PAGE_MODE"
 echo "  Font size:  $FONTSIZE"
 echo "  Main font:  $MAINFONT"
 echo "  Mono font:  $MONOFONT"
+echo "  Footer:     ${CRAFTED_FOOTER}"
 
 # Validate theme
 THEME_FILE="$SCRIPT_DIR/themes/${THEME}.tex"
@@ -479,6 +486,13 @@ if [[ "$PAGE_MODE" == "one" ]]; then
   FONTSIZE="9.5pt"
   GEOMETRY="left=0.6in,right=0.6in,top=0.4in,bottom=0.4in"
   echo "  Page mode one: tightened margins for single-page fit"
+fi
+
+# Crafted footer (enabled by default)
+CRAFTED_FOOTER_INCLUDE=""
+if [[ "${CRAFTED_FOOTER,,}" == "true" ]]; then
+  CRAFTED_FOOTER_INCLUDE="  - $SCRIPT_DIR/crafted-footer.tex"
+  echo "  Footer:     ats_safe_resume credit"
 fi
 
 # Build a temporary defaults YAML with theme preamble injected,
@@ -502,6 +516,7 @@ metadata:
 include-in-header:
   - $THEME_FILE
   - $SCRIPT_DIR/resume-preamble.tex
+$CRAFTED_FOOTER_INCLUDE
 DEFAULTS
 
 # Support for user overrides

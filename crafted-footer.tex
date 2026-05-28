@@ -1,0 +1,24 @@
+% Crafted with ats_safe_resume footer
+% Included via --include-in-header when crafted_footer=true (default)
+% Places a subtle credit line at the bottom of the last page.
+%
+% Override or remove this file if you want a different footer message,
+% or set `crafted_footer: false` in the YAML frontmatter to disable.
+
+\IfFileExists{hyperref}{%
+  \AtEndDocument{%
+    \vfill
+    \noindent\hfill{%
+      \footnotesize\color{accent!25}%
+      crafted with \href{https://github.com/denniyahh/ats_safe_resume}{ats\_safe\_resume}%
+    }%
+  }%
+}{%
+  \AtEndDocument{%
+    \vfill
+    \noindent\hfill{%
+      \footnotesize\color{accent!25}%
+      crafted with ats\_safe\_resume%
+    }%
+  }%
+}
