@@ -32,7 +32,7 @@ If you want to build locally without installing LaTeX:
 
 ```bash
 # Build your resume with one command
-docker run --rm -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest /data/resume.md
+docker run --rm -w /data -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest /data/resume.md
 ```
 
 Or use the convenience wrapper:

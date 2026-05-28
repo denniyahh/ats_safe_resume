@@ -314,7 +314,7 @@ For users who want local iteration but refuse to install LaTeX (1GB+ download, c
 
 ```bash
 # From the repo root:
-docker run --rm -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest
+docker run --rm -w /data -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest /data/resume.md
 ```
 
 Or via the convenience wrapper:

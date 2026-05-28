@@ -21,6 +21,7 @@ echo "  Image:    ghcr.io/denniyahh/ats_safe_resume:latest"
 echo ""
 
 exec docker run --rm \
+  -w /data \
   -v "$INPUT_DIR":/data \
   -v "$(pwd)/dist":/data/dist \
   ghcr.io/denniyahh/ats_safe_resume:latest \

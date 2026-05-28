@@ -29,6 +29,7 @@ set -euo pipefail
 #########################
 
 INPUT_MD="${1:-resume.md}"
+INPUT_DIR="$(cd "$(dirname "$INPUT_MD")" && pwd)"
 OUT_DIR="${OUT_DIR:-dist}"
 FORMATS="${FORMATS:-pdf,docx,html,txt,json}"
 
@@ -127,12 +128,17 @@ title = result.get('title', 'Your Name — Resume')
 fontsize = result.get('fontsize', '10pt')
 geometry = result.get('geometry', 'left=0.7in,right=0.7in,top=0.5in,bottom=0.5in')
 
+mainfont = result.get('mainfont', 'Source Sans 3')
+monofont = result.get('monofont', 'Source Code Pro')
+
 # Quote values for safe eval in the shell
 print(f"THEME=\"{theme}\"")
 print(f"PAGE_MODE=\"{page_mode}\"")
 print(f"TITLE=\"{title}\"")
 print(f"FONTSIZE=\"{fontsize}\"")
 print(f"GEOMETRY=\"{geometry}\"")
+print(f"MAINFONT=\"{mainfont}\"")
+print(f"MONOFONT=\"{monofont}\"")
 PY
 }
 
@@ -428,7 +434,8 @@ echo "Parsing frontmatter from $INPUT_MD..."
 ENV_THEME="${THEME:-}"
 ENV_PAGE_MODE="${PAGE_MODE:-}"
 ENV_FONTSIZE="${FONTSIZE:-}"
-ENV_GEOMETRY="${GEOMETRY:-}"
+ENV_MAINFONT="${MAINFONT:-}"
+ENV_MONOFONT="${MONOFONT:-}"
 
 eval "$(parse_frontmatter)"
 
@@ -437,10 +444,14 @@ THEME="${ENV_THEME:-${THEME:-dark}}"
 PAGE_MODE="${ENV_PAGE_MODE:-${PAGE_MODE:-two}}"
 FONTSIZE="${ENV_FONTSIZE:-${FONTSIZE:-10pt}}"
 GEOMETRY="${ENV_GEOMETRY:-${GEOMETRY:-left=0.7in,right=0.7in,top=0.5in,bottom=0.5in}}"
+MAINFONT="${ENV_MAINFONT:-${MAINFONT:-Source Sans 3}}"
+MONOFONT="${ENV_MONOFONT:-${MONOFONT:-Source Code Pro}}"
 
 echo "  Theme:      $THEME"
 echo "  Page mode:  $PAGE_MODE"
 echo "  Font size:  $FONTSIZE"
+echo "  Main font:  $MAINFONT"
+echo "  Mono font:  $MONOFONT"
 
 # Validate theme
 THEME_FILE="$SCRIPT_DIR/themes/${THEME}.tex"
@@ -457,7 +468,7 @@ fi
 
 # Page mode adjustments
 if [[ "$PAGE_MODE" == "one" ]]; then
-  FONTSIZE="10pt"
+  FONTSIZE="9.5pt"
   GEOMETRY="left=0.6in,right=0.6in,top=0.4in,bottom=0.4in"
   echo "  Page mode one: tightened margins for single-page fit"
 fi
@@ -472,9 +483,9 @@ standalone: true
 pdf-engine: $PDF_ENGINE
 template: $TEMPLATE_FILE
 variables:
-  mainfont: Source Sans 3
+  mainfont: $MAINFONT
   mainfontoptions: Ligatures=NoCommon
-  monofont: Source Code Pro
+  monofont: $MONOFONT
   fontsize: $FONTSIZE
   colorlinks: true
   linkcolor: darkgray
@@ -484,6 +495,14 @@ include-in-header:
   - $THEME_FILE
   - $SCRIPT_DIR/resume-preamble.tex
 DEFAULTS
+
+# Support for user overrides
+USER_DEFAULTS_ARG=()
+if [[ -f "$INPUT_DIR/pandoc-defaults.user.yaml" ]]; then
+  USER_DEFAULTS_ARG=("-d" "$INPUT_DIR/pandoc-defaults.user.yaml")
+elif [[ -f "pandoc-defaults.user.yaml" ]]; then
+  USER_DEFAULTS_ARG=("-d" "pandoc-defaults.user.yaml")
+fi
 
 #########################
 # Build
@@ -505,6 +524,7 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
       fi
       pandoc "$PDF_INPUT" \
         -d "$DEFAULTS_FILE" \
+        "${USER_DEFAULTS_ARG[@]}" \
         -o "${OUT_DIR}/${BASENAME}.pdf" \
         --variable "geometry=$GEOMETRY"
 
