@@ -191,8 +191,21 @@ from pathlib import Path
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
 
+# Helper: strip HTML comments from text
+def strip_html_comments(t):
+    return re.sub(r'<!--.*?-->', '', t, flags=re.DOTALL)
+
+# Helper: smart split by markdown H3 headings (company name)
+def split_by_h3(block):
+    """Split text into chunks at each ### Company heading."""
+    parts = re.split(r'\n(?=### )', block)
+    return [p.strip() for p in parts if p.strip()]
+
 # Strip YAML frontmatter
 text = re.sub(r'^---\s*\n.*?\n---\s*\n', '', text, flags=re.DOTALL)
+
+# Strip HTML comments from the raw text first
+text = strip_html_comments(text)
 
 # Extract sections using markdown headings
 sections = {}
@@ -204,7 +217,7 @@ for line in text.split('\n'):
     h1 = re.match(r'^# (.+)', line)
     if h1 and current_section is None:
         current_section = 'header'
-        continue  # skip the name heading — we extract it below
+        continue
     if h2:
         if current_section:
             sections[current_section] = '\n'.join(current_content).strip()
@@ -219,104 +232,174 @@ if current_section:
 # Build JSON Resume schema
 resume = {"basics": {}, "work": [], "education": [], "skills": []}
 
-# Basics from first line and contact info
+# ── Basics ──────────────────────────────────────────────────────
 lines = text.strip().split('\n')
 if lines:
     name_line = lines[0].lstrip('#').strip()
     resume["basics"]["name"] = name_line
 
-    # Find contact line (contains email, phone, etc.)
+    # Find contact line (contains email, phone, linkedin, github)
     for i, l in enumerate(lines[1:15]):
         l = l.strip()
-        if l and ('@' in l or 'linkedin.com' in l or 'github.com' in l):
-            clean = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', l)
-            clean = re.sub(r'\*\*', '', clean)
-            parts = [p.strip() for p in clean.replace(' | ', ' · ').split('·')]
-            for p in parts:
-                p = p.strip()
-                if '@' in p:
-                    resume["basics"]["email"] = p
-                elif 'linkedin.com' in p.lower():
-                    resume["basics"]["profiles"] = resume["basics"].get("profiles", [])
-                    resume["basics"]["profiles"].append({"network": "LinkedIn", "username": p.split('/')[-1], "url": p})
+        if not l or ('@' not in l and 'linkedin.com' not in l.lower() and 'github.com' not in l.lower()):
+            continue
+        # Extract URL <-> text mappings from markdown links first
+        url_map = {}
+        for text_part, url in re.findall(r'\[([^\]]+)\]\(([^)]+)\)', l):
+            url_map[text_part.strip()] = url
+        # Strip markdown link syntax, keep visible text
+        clean = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', l)
+        clean = re.sub(r'\*\*', '', clean)
+        # Normalize separators to middle-dot for splitting
+        parts = [p.strip() for p in clean.replace(' | ', ' · ').split('·')]
+        for p in parts:
+            p = p.strip()
+            if not p:
+                continue
+            if '@' in p:
+                resume["basics"]["email"] = p
+            elif p.lower() in [k.lower() for k in url_map]:
+                url = url_map[p]
+                if 'linkedin.com' in url.lower():
+                    resume["basics"].setdefault("profiles", []).append({
+                        "network": "LinkedIn",
+                        "username": url.rstrip('/').split('/')[-1],
+                        "url": url
+                    })
+                elif 'github.com' in url.lower():
+                    resume["basics"].setdefault("profiles", []).append({
+                        "network": "GitHub",
+                        "username": url.rstrip('/').split('/')[-1],
+                        "url": url
+                    })
+            elif re.match(r'^[\d\-\(\)\s\+]+$', p):
+                resume["basics"]["phone"] = p
+            elif p.lower().startswith('http'):
+                # Bare URL, not wrapped in markdown link syntax
+                if 'linkedin.com' in p.lower():
+                    resume["basics"].setdefault("profiles", []).append({
+                        "network": "LinkedIn",
+                        "username": p.rstrip('/').split('/')[-1],
+                        "url": p
+                    })
                 elif 'github.com' in p.lower():
-                    resume["basics"]["profiles"] = resume["basics"].get("profiles", [])
-                    resume["basics"]["profiles"].append({"network": "GitHub", "username": p.split('/')[-1], "url": p})
-                elif re.match(r'^[\d\-\(\)\s\+]+$', p):
-                    resume["basics"]["phone"] = p
-            break
-
-# Summary (Executive Profile)
-for sec_name in ['Executive Profile', 'Professional Summary', 'Summary']:
-    if sec_name in sections:
-        resume["basics"]["summary"] = sections[sec_name]
+                    resume["basics"].setdefault("profiles", []).append({
+                        "network": "GitHub",
+                        "username": p.rstrip('/').split('/')[-1],
+                        "url": p
+                    })
         break
 
-# Work experience
+# ── Summary ─────────────────────────────────────────────────────
+for sec_name in ['Executive Profile', 'Professional Summary', 'Summary']:
+    if sec_name in sections:
+        summary = sections[sec_name]
+        # Remove any remaining HTML comments
+        summary = strip_html_comments(summary)
+        # Remove bold markers for clean text
+        summary = re.sub(r'\*\*', '', summary)
+        resume["basics"]["summary"] = summary.strip()
+        break
+
+# ── Work Experience ─────────────────────────────────────────────
 if 'Professional Experience' in sections:
     exp_text = sections['Professional Experience']
-    # Split by ### or **Company** patterns
-    jobs = re.split(r'\n(?=### |\*\*\[)', exp_text)
-    for job in jobs:
-        job = job.strip()
-        if not job:
-            continue
+    # Split into company blocks by ### header
+    company_blocks = split_by_h3(exp_text)
+
+    for block in company_blocks:
+        lines = block.split('\n')
         entry = {}
-        # Company and title
-        company_match = re.search(r'\*\*\[?([^\]]*)\]?\*\*.*?\*\*(.*?)\*\*', job, re.DOTALL)
+
+        # Line 0: ### [Company Name](url) — City, State
+        first = lines[0].strip()
+        company_match = re.match(r'^###\s+\[([^\]]+)\]\(([^)]+)\)\s*[—–-]?\s*(.*)$', first)
         if company_match:
             entry["company"] = company_match.group(1).strip()
-            date_match = re.search(r'\*(.{3,40})\*', job.split('\n')[0] if '\n' in job else job)
-            if not date_match:
-                date_match = re.search(r'\*(.{3,40})\*', job)
+            entry["url"] = company_match.group(2).strip()
+        else:
+            # Plain ### Company Name — City (no link)
+            company_match = re.match(r'^###\s+(.+?)\s*[—–-]?\s*(.*)$', first)
+            if company_match:
+                entry["company"] = company_match.group(1).strip()
+
+        # Lines 1+: roles and bullets
+        current_position = None
+        current_highlights = []
+        role_lines = lines[1:]
+
+        for rl in role_lines:
+            rl = rl.strip()
+            if not rl:
+                continue
+            # Role title line: **Title** — Subtitle
+            role_match = re.match(r'^\*\*(.+?)\*\*\s*[—–-]?\s*(.*)$', rl)
+            if role_match:
+                # Save previous role if exists
+                if current_position:
+                    entry.setdefault("positions", []).append({
+                        "position": current_position,
+                        "highlights": current_highlights
+                    })
+                current_position = role_match.group(1).strip()
+                # Check next line for date range
+                sub = role_match.group(2).strip()
+                current_highlights = []
+            # Date line: *Jun 2021 – Present*
+            date_match = re.match(r'^\*(.+?)\*$', rl)
             if date_match:
                 entry["startDate"] = date_match.group(1).strip()
-        # Position
-        pos_match = re.search(r'\*\*(.+?)\*\*', job)
-        if pos_match and 'company' not in entry:
-            entry["position"] = pos_match.group(1).strip()
-        # Bullet points as highlights
-        bullets = re.findall(r'^- (.+)$', job, re.MULTILINE)
-        if bullets:
-            entry["highlights"] = bullets
-        elif 'summary' not in entry:
-            entry["summary"] = job[:500]
+            # Bullet point: - something
+            bullet_match = re.match(r'^- (.+)$', rl)
+            if bullet_match:
+                bullet_text = re.sub(r'\*\*', '', bullet_match.group(1)).strip()
+                current_highlights.append(bullet_text)
 
-        if entry.get("company") or entry.get("position"):
+        # Save last role
+        if current_position:
+            entry.setdefault("positions", []).append({
+                "position": current_position,
+                "highlights": current_highlights
+            })
+        # Add all highlights to top-level for broad compatibility
+        all_highlights = []
+        for pos in entry.get("positions", []):
+            all_highlights.extend(pos.get("highlights", []))
+        if all_highlights:
+            entry["highlights"] = all_highlights
+
+        if entry.get("company") or entry.get("positions"):
             resume["work"].append(entry)
 
-# Education
+# ── Education ───────────────────────────────────────────────────
 if 'Education' in sections:
     edu_text = sections['Education']
-    schools = re.split(r'\n(?=\*\*)', edu_text)
-    for school in schools:
-        school = school.strip()
-        if not school:
+    for line in edu_text.split('\n'):
+        line = line.strip()
+        if not line:
             continue
         entry = {}
-        name_match = re.search(r'\*\*(.+?)\*\*', school)
+        name_match = re.match(r'^\*\*(.+?)\*\*\s*[—–-]?\s*(.+)$', line)
         if name_match:
             entry["institution"] = name_match.group(1).strip()
-        degree_match = re.search(r'— (.+)', school)
-        if degree_match:
-            entry["studyType"] = degree_match.group(1).strip()
+            entry["studyType"] = name_match.group(2).strip()
         if entry:
             resume["education"].append(entry)
 
-# Skills
+# ── Skills ──────────────────────────────────────────────────────
 if 'Technical Skills' in sections:
     skills_text = sections['Technical Skills']
     for line in skills_text.split('\n'):
         line = line.strip()
         if not line or line.startswith('#'):
             continue
-        # Parse "Category: skill1, skill2, skill3" or "**Category:** skill1, skill2"
-        cat_match = re.match(r'\*\*(.+?):?\*\*\s*(.+)', line)
+        cat_match = re.match(r'^\*\*(.+?):?\*\*\s*(.+)$', line)
         if cat_match:
-            resume["skills"].append({
-                "name": cat_match.group(1).strip(),
-                "keywords": [k.strip() for k in cat_match.group(2).split(',')]
-            })
+            name = cat_match.group(1).strip().rstrip(':').strip()
+            kw = cat_match.group(2).strip()
+            # Split keywords, handle comma+space variations
+            keywords = [k.strip() for k in re.split(r'[,;]', kw) if k.strip()]
+            resume["skills"].append({"name": name, "keywords": keywords})
 
 Path(sys.argv[2]).write_text(json.dumps(resume, indent=2), encoding="utf-8")
 print(f"  JSON Resume written: {sys.argv[2]}")
