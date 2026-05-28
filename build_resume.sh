@@ -325,9 +325,17 @@ if 'Professional Experience' in sections:
             entry["url"] = company_match.group(2).strip()
         else:
             # Plain ### Company Name — City (no link)
-            company_match = re.match(r'^###\s+(.+?)\s*[—–-]?\s*(.*)$', first)
+            company_match = re.match(r'^###\s+([^—–]+)\s*[—–]\s*(.*)$', first)
             if company_match:
-                entry["company"] = company_match.group(1).strip()
+                name = company_match.group(1).strip()
+                # Strip trailing parentheticals like "(now [ICE Data...])"
+                name = re.sub(r'\s*\(.*\)\s*$', '', name).strip()
+                entry["company"] = name
+            else:
+                # ### Company Name (no dash)
+                company_match = re.match(r'^###\s+(.+)$', first)
+                if company_match:
+                    entry["company"] = company_match.group(1).strip()
 
         # Lines 1+: roles and bullets
         current_position = None
