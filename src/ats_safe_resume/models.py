@@ -161,7 +161,7 @@ class Resume(BaseModel):
                     "startDate": self._normalize_date(position.start_date),
                     "endDate": self._normalize_date(position.end_date),
                     "summary": position.summary,
-                    "highlights": position.bullets,
+                    "highlights": [self._strip_markdown(b) for b in position.bullets],
                 })
 
         skills = [{"name": s.category, "keywords": [k.strip() for k in s.skills.split(",")]} for s in self.technical_skills]
@@ -184,6 +184,7 @@ class Resume(BaseModel):
                 "profiles": self._parse_profiles(),
             },
             "work": work,
+            "skills": skills,
             "education": [{
                 "institution": e.institution,
                 "area": e.details,
@@ -191,5 +192,4 @@ class Resume(BaseModel):
                 "startDate": None,
                 "endDate": None,
             } for e in self.education],
-            "skills": skills,
         }

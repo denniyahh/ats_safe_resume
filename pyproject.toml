@@ -23,3 +23,8 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 ats_safe_resume = ["templates/*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "uat: UAT and regression tests (exhaustive, slow — not run in CI)",
+]

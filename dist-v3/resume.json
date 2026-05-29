@@ -1,0 +1,154 @@
+{
+  "$schema": "https://jsonresume.org/schema/",
+  "basics": {
+    "name": "Jane Doe",
+    "label": "Senior Product Manager",
+    "summary": "Product leader with 10+ years shipping data platforms, SaaS products, and AI-powered features into production. Combines deep domain expertise in financial technology with modern product management practices \u2014 accelerating delivery through quantitative decision-making and cross-functional execution. Grew platform revenue from $5MM to $25MM+, scaled enterprise adoption to 200+ accounts, and closed critical quality gaps from 90% to 99.5%.",
+    "email": "jane.doe@email.com",
+    "phone": "(555) 123-4567",
+    "url": null,
+    "location": {
+      "city": "San Francisco",
+      "countryCode": null
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "janedoe",
+        "url": "https://linkedin.com/in/janedoe"
+      },
+      {
+        "network": "GitHub",
+        "username": "janedoe",
+        "url": "https://github.com/janedoe"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Acme Corp",
+      "location": "San Francisco, CA",
+      "position": "Senior Product Manager",
+      "url": "https://www.acmecorp.com",
+      "startDate": "Jun 2021",
+      "endDate": null,
+      "summary": null,
+      "highlights": [
+        "Grew the company's data platform from **$5MM** to **$25MM+** annual revenue through new product launches and expanded enterprise partnerships.",
+        "Launched **Acme Insights**, an AI-powered analytics product, from concept to **$8MM** ARR in 18 months \u2014 now the company's fastest-growing product line.",
+        "Established the Platform Engineering team's product practice, reducing average feature delivery time by **40%** through improved requirements and prioritization.",
+        "Led adoption of OKR-based planning across 4 engineering teams, increasing feature hit rate from **60%** to **90%** quarter-over-quarter."
+      ]
+    },
+    {
+      "name": "Acme Corp",
+      "location": "San Francisco, CA",
+      "position": "Product Manager",
+      "url": "https://www.acmecorp.com",
+      "startDate": "Aug 2019",
+      "endDate": "May 2021",
+      "summary": null,
+      "highlights": [
+        "Delivered the company's first REST API product, adopted by **75+** enterprise customers in the first year.",
+        "Drove migration from legacy monolith to microservices architecture, reducing deployment time from **3 hours** to **15 minutes**.",
+        "Founded the Product Analytics function, establishing data-driven decision-making across 3 product teams."
+      ]
+    },
+    {
+      "name": "TechCorp Solutions",
+      "location": "New York, NY",
+      "position": "Senior Business Analyst",
+      "url": "https://www.techcorp.com",
+      "startDate": "Mar 2015",
+      "endDate": "Jun 2017",
+      "summary": null,
+      "highlights": [
+        "Product lead for **TradeFlow**, an enterprise fixed-income trading platform serving **50+** institutional clients.",
+        "Delivered a complete redesign of the portfolio analytics module, increasing daily active users by **120%**.",
+        "Reduced trade settlement errors by **35%** through a redesigned validation workflow and real-time exception alerts."
+      ]
+    },
+    {
+      "name": "DataFirst Inc.",
+      "location": "New York, NY",
+      "position": "Business Analyst",
+      "url": "https://www.datafirst.io",
+      "startDate": "Jan 2011",
+      "endDate": "Jan 2014",
+      "summary": null,
+      "highlights": [
+        "Product founder of **[InsightHub](https://insighthub.datafirst.io/)** , a web platform serving **500K+** daily data requests to **2,000+** subscribers.",
+        "Designed and shipped industry-first visualization tools, including interactive market data dashboards and automated reporting workflows.",
+        "Won **\"Best Data Product\"** award in 2013 and 2014."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "The University of California, Berkeley",
+      "area": "Minor in Computer Science",
+      "studyType": "B.S. Business Administration",
+      "startDate": null,
+      "endDate": null
+    }
+  ],
+  "skills": [
+    {
+      "name": "Core Expertise",
+      "keywords": [
+        "Product strategy & roadmap",
+        "AI/ML productization",
+        "Data platform design",
+        "Agile & Scrum",
+        "Stakeholder management",
+        "Quantitative analysis"
+      ]
+    },
+    {
+      "name": "Product & strategy",
+      "keywords": [
+        "Roadmap planning",
+        "OKR frameworks",
+        "user research",
+        "competitive analysis",
+        "go-to-market strategy",
+        "pricing & packaging"
+      ]
+    },
+    {
+      "name": "Data & analytics",
+      "keywords": [
+        "SQL",
+        "Python (pandas",
+        "matplotlib)",
+        "A/B testing",
+        "cohort analysis",
+        "Mixpanel",
+        "Looker",
+        "Tableau"
+      ]
+    },
+    {
+      "name": "Platform & infrastructure",
+      "keywords": [
+        "REST APIs",
+        "microservices",
+        "cloud platforms (AWS",
+        "GCP)",
+        "streaming data",
+        "distributed systems"
+      ]
+    },
+    {
+      "name": "Delivery & methods",
+      "keywords": [
+        "Scrum",
+        "Kanban",
+        "SAFe",
+        "Jira",
+        "Confluence",
+        "cross-functional facilitation"
+      ]
+    }
+  ]
+}

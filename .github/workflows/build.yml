@@ -48,7 +48,7 @@ jobs:
         run: python3 -m ats_safe_resume example/resume.md --out-dir dist
 
       - name: Validate all outputs
-        run: python3 -m pytest tests/test_parser.py tests/test_models.py -v
+        run: python3 -m pytest tests/test_parser.py tests/test_models.py -v -m "not uat"
 
       - name: Copy demo PDF to tracked location
         run: cp dist/resume.pdf example/resume.pdf
