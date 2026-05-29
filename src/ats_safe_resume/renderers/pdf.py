@@ -1,6 +1,7 @@
-"""PDF renderer using Typst."""
+"""PDF renderer using Typst — v1 Eisvogel-compatible layout."""
 
 from pathlib import Path
+import tempfile
 import re
 
 import typst
@@ -10,165 +11,148 @@ from ats_safe_resume.renderers.base import BaseRenderer
 from ats_safe_resume import inline_md
 
 
-def _escape_typst(text: str) -> str:
-    """Escape Typst-special characters in plain text.
+# ── Escape helpers ────────────────────────────────────────────────
 
-    Only escapes characters that cause *parser* errors (not formatting sigils
-    like * and _ which are intentionally used by inline_md.to_typst(),
-    nor [ and ] which are needed for markdown links).
-    """
+def _escape(text: str) -> str:
+    """Escape Typst parser-special characters: @ # $ < > \\"""
     text = text.replace("\\", "\\\\")
-    for ch in "@#$~`":
+    for ch in "@#$":
         text = text.replace(ch, "\\" + ch)
     text = text.replace("<", "\\<")
     text = text.replace(">", "\\>")
     return text
 
 
-def _escape_typst_all(text: str) -> str:
-    """Escape all Typst-special characters including *, _, [, ].
-    Used for plain-text fields that don't go through to_typst().
-    """
-    text = _escape_typst(text)
-    for ch in "*_[]":
+def _escape_all(text: str) -> str:
+    """Escape all Typst-special chars including * _ ` (plain text)."""
+    text = _escape(text)
+    for ch in "*_`":
         text = text.replace(ch, "\\" + ch)
     return text
 
 
-def _e(text: str) -> str:
-    """Shortcut: escape then convert inline markdown."""
-    return inline_md.to_typst(_escape_typst(text))
+def _md(text: str) -> str:
+    """Convert **bold**→*bold* and *italic*→_italic_ for Typst."""
+    text = _escape(text)
+    text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text)
+    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'_\1_', text)
+    return text
 
 
-def _esafe(text: str | None) -> str:
-    """Escape text or return empty string for None."""
-    if text is None:
-        return ""
-    return _escape_typst_all(text)
+def _strip_links(text: str) -> str:
+    """Remove [text](url) markdown links."""
+    return re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+
+
+def _s(text: str | None) -> str:
+    """Safe plain text, returns '' for None."""
+    return _escape_all(text) if text else ''
+
+
+ACCENT = "#555555"
 
 
 class PdfRenderer(BaseRenderer):
-    """Render resume to PDF using Typst."""
+    """Render resume to PDF using Typst, v1-compatible Eisvogel layout."""
 
     def render(self, resume: Resume, output_path: Path) -> None:
-        typst_source = self._render_typst(resume)
-        import tempfile
+        src = self._render_typst(resume)
         with tempfile.NamedTemporaryFile(suffix=".typ", mode="w", delete=False) as f:
-            f.write(typst_source)
-            temp_path = Path(f.name)
+            f.write(src)
+            tp = Path(f.name)
         try:
-            pdf_data = typst.compile(str(temp_path), format="pdf")
-            output_path.write_bytes(pdf_data)
-        except typst.TypstError as e:
-            print(f"--- TYPST ERROR: {e} ---")
-            print(typst_source)
-            print("------------------------")
-            raise
+            pdf = typst.compile(str(tp), format="pdf")
+            output_path.write_bytes(pdf)
         finally:
-            temp_path.unlink(missing_ok=True)
+            tp.unlink(missing_ok=True)
 
     def _render_typst(self, resume: Resume) -> str:
-        """Generate Typst markup from Resume model."""
-        lines = []
+        """Build Typst markup matching v1 Eisvogel layout."""
+        L = []
 
-        # Page setup
-        lines.append('#set page("us-letter", margin: (left: 0.7in, right: 0.7in, top: 0.5in, bottom: 0.5in))')
-        lines.append('#set text(font: "Source Sans 3", size: 10pt)')
-        lines.append('#set par(leading: 0.5em, spacing: 0.65em)')
-        lines.append('#set list(tight: true, spacing: 0.65em, indent: 1em)')
-        lines.append('#show link: set text(fill: rgb("555555"))')
-        lines.append('#show heading.where(level: 1): it => {')
-        lines.append('  set text(size: 12pt, fill: rgb("555555"))')
-        lines.append('  block[#it.body]')
-        lines.append('  v(-0.3em)')
-        lines.append('  line(length: 100%, stroke: 0.3pt + rgb("555555").lighten(60%))')
-        lines.append('  v(0.3em)')
-        lines.append('}')
-        lines.append('#show heading.where(level: 2): it => {')
-        lines.append('  set text(size: 10pt, fill: rgb("555555"))')
-        lines.append('  block[#it.body]')
-        lines.append('}')
-        lines.append("")
+        # ── Page & style setup ──────────────────────────────────
+        L.append('#set page("a4", margin: (left: 0.7in, right: 0.7in, top: 0.5in, bottom: 0.5in))')
+        L.append('#set text(font: "Source Sans 3", size: 10pt)')
+        L.append('#set par(leading: 0.6em)')
+        L.append('#set heading(numbering: none)')
+        L.append('#show heading.where(level: 1): it => {')
+        L.append('  set text(fill: black, weight: "bold", size: 10pt)')
+        L.append('  v(0.5em)')
+        L.append('  it')
+        L.append('  line(length: 100%, stroke: 0.5pt + gray)')
+        L.append('  v(0.15em)')
+        L.append('}')
+        L.append('#show heading.where(level: 2): it => {')
+        L.append('  v(0.1em)')
+        L.append('  it')
+        L.append('}')
+        L.append('#show list: set text(size: 10pt)')
 
-        # Name
+        L.append('')
+
+        # ── Name block ─────────────────────────────────────────
         if resume.name:
-            lines.append(f'#align(center, text(size: 18pt, weight: "bold")[{_esafe(resume.name)}])')
+            L.append(f'#text(size: 18pt, weight: "bold")[{_escape_all(resume.name)}]')
+        L.append('#v(1.4em)')
 
-        # Title line
         if resume.title_line:
-            lines.append(f'#align(center, text(size: 11pt, weight: "semibold")[{_esafe(resume.title_line)}])')
+            L.append(f'#text(size: 10pt, weight: "bold")[{_escape_all(resume.title_line)}]')
+        L.append('#v(0.12em)')
 
-        # Contact
         if resume.contact:
-            parts = []
-            if resume.contact.city_state: parts.append(_esafe(resume.contact.city_state))
-            if resume.contact.email: parts.append(f'#link("mailto:{resume.contact.email}")[{_esafe(resume.contact.email)}]')
-            if resume.contact.phone: parts.append(_esafe(resume.contact.phone))
-            if resume.contact.linkedin: parts.append(f'#link("{resume.contact.linkedin}")[LinkedIn]')
-            if resume.contact.github: parts.append(f'#link("{resume.contact.github}")[GitHub]')
-            if resume.contact.website: parts.append(f'#link("{resume.contact.website}")[Website]')
-            for other in resume.contact.other:
-                parts.append(_esafe(other))
-            contact_text = " | ".join(parts)
-            lines.append(f"#align(center, text(size: 9pt)[{contact_text}])")
+            c = _escape(resume.contact.to_ats_string())
+            c = _strip_links(c)
+            L.append(f'#text(size: 9pt)[{c}]')
+        L.append('#v(0.6em)')
 
-        lines.append("")
-
-        # Sections
+        # ── Sections ───────────────────────────────────────────
         if resume.executive_profile:
-            lines.append("= Executive Profile")
-            lines.append(f"#text(size: 10pt)[{_e(resume.executive_profile)}]")
-            lines.append("")
+            L.append('= Executive Profile')
+            L.append(f'{_md(resume.executive_profile)}')
 
         if resume.core_expertise:
-            lines.append("= Core Expertise")
-            lines.append(f"#text(size: 10pt)[{_e(resume.core_expertise)}]")
-            lines.append("")
+            L.append('= Core Expertise')
+            L.append(f'{_md(resume.core_expertise)}')
 
         if resume.companies:
-            lines.append("= Professional Experience")
-            lines.append("")
+            L.append('= Professional Experience')
             for company in resume.companies:
-                for position in company.positions:
-                    loc = f" — {_esafe(company.location)}" if company.location else ""
-                    lines.append(f"== {_esafe(company.name)}{loc}")
-
-                    title_line = f"#strong[{_esafe(position.title)}]"
-                    if position.subtitle:
-                        title_line += f" — {_esafe(position.subtitle)}"
-                    if position.start_date:
-                        dates = f"({_esafe(position.start_date)} – {_esafe(position.end_date) or 'Present'})"
-                        title_line += f" #emph[{dates}]"
-                    lines.append(f"#text(size: 10pt)[{title_line}]")
-
-                    if position.summary:
-                        lines.append(f"#text(size: 10pt)[{_e(position.summary)}]")
-
-                    for bullet in position.bullets:
-                        lines.append(f"- {_e(bullet)}")
-
-                    lines.append("")
+                for pos in company.positions:
+                    L.append(f'== {_s(company.name)}  --  {_s(company.location)}'
+                             if company.location else f'== {_s(company.name)}')
+                    # Position line: title [+ subtitle] [+ dates inline, no parens]
+                    parts = [f'*{_s(pos.title)}*']
+                    if pos.subtitle:
+                        parts.append(_s(pos.subtitle))
+                    if pos.start_date:
+                        ed = _s(pos.end_date) if pos.end_date else 'Present'
+                        parts.append(f'_{_s(pos.start_date)}  --  {ed}_')
+                    L.append('#text(size: 10pt)[' + '  --  '.join(parts) + ']')
+                    if pos.summary:
+                        L.append(_md(_strip_links(pos.summary)))
+                    for bullet in pos.bullets:
+                        L.append(f'-  {_md(_strip_links(bullet))}')
+                    L.append('')
 
         if resume.technical_skills:
-            lines.append("= Technical Skills")
+            L.append('= Technical Skills')
             for skill in resume.technical_skills:
-                cat = _esafe(skill.category)
-                skills_text = _esafe(skill.skills)
-                lines.append(f"#text(size: 10pt)[#strong[{cat}:] {skills_text}]")
-            lines.append("")
+                L.append(f'{_s(skill.category)}: {skill.skills}')
+                L.append('')
 
         if resume.education:
-            lines.append("= Education")
+            L.append('= Education')
             for edu in resume.education:
-                edu_text = f"#strong[{_esafe(edu.institution)}]"
+                ed = f'*{_s(edu.institution)}*'
                 if edu.degree:
-                    edu_text += f" — {_esafe(edu.degree)}"
+                    ed += f'  --  {_s(edu.degree)}'
                 if edu.details:
-                    edu_text += f", {_esafe(edu.details)}"
-                lines.append(f"#text(size: 10pt)[{edu_text}]")
-            lines.append("")
+                    ed += f', {_s(edu.details)}'
+                L.append(f'#text(size: 10pt)[{ed}]')
 
         if resume.crafted_footer:
-            lines.append('#align(center, text(size: 8pt, fill: gray)[crafted with #link("https://github.com/denniyahh/ats_safe_resume")[ats_safe_resume]])')
+            L.append('#v(1em)')
+            L.append('#align(center, text(size: 8pt, fill: gray)['
+                     'crafted with #link("https://github.com/denniyahh/ats_safe_resume")[ats_safe_resume]])')
 
-        return "\n".join(lines)
+        return '\n'.join(L)
