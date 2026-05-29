@@ -84,7 +84,7 @@ def test_parse_html_comments():
 
 
 def test_parse_company_with_inline_markdown_link():
-    """Company name containing [text](url) should have URL stripped."""
+    """Company name with embedded markdown link should preserve link syntax."""
     md = """---
 theme: dark
 ---
@@ -101,7 +101,8 @@ theme: dark
 """
     resume = parse(md)
     assert len(resume.companies) == 1
-    assert resume.companies[0].name == "OldCorp (now NewCorp)"
-    assert "[" not in resume.companies[0].name
-    assert "]" not in resume.companies[0].name
+    # Embedded markdown link stays in the name for pandoc to render
+    assert "[NewCorp](https://newcorp.com)" in resume.companies[0].name
     assert resume.companies[0].location == "New York, NY"
+    # Embedded URL is NOT in company.url (only primary heading links use that)
+    assert resume.companies[0].url is None

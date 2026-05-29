@@ -194,6 +194,8 @@ def _parse_companies(lines: list[str]) -> list[Company]:
                 company.name = m.group(1)
                 company.url = m.group(2)
                 company.location = m.group(3).strip()
+                # Strip inline markdown links from name (edge cases)
+                company.name = _strip_markdown_links(company.name)
             else:
                 # Name — Location (may contain markdown links inline)
                 # Only split on em/en dash or spaced hyphen (not word-internal hyphens)
@@ -201,12 +203,9 @@ def _parse_companies(lines: list[str]) -> list[Company]:
                 company.name = parts[0].strip()
                 if len(parts) > 1:
                     company.location = parts[1].strip()
-                # Extract URL from embedded markdown link: [text](url)
-                url_m = re.search(r'\[([^\]]+)\]\(([^)]+)\)', heading)
-                if url_m:
-                    company.url = url_m.group(2)
-            # Clean any remaining markdown link syntax: [text](url) → text
-            company.name = _strip_markdown_links(company.name)
+                # Embedded markdown link: [text](url) stays in the name unchanged
+                # so pandoc renders only the link text as a hyperlink.
+                # We intentionally do NOT strip markdown links or set company.url.
             if company.location:
                 company.location = _strip_markdown_links(company.location)
             current_company = company

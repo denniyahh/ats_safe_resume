@@ -151,6 +151,7 @@ class PandocPdfRenderer(BaseRenderer):
                     lines.append(f"### [{company.name}]({company.url})"
                                  f"{' — ' + company.location if company.location else ''}")
                 else:
+                    # No primary URL — render name as-is (may contain inline markdown links)
                     lines.append(f"### {company.name}"
                                  f"{' — ' + company.location if company.location else ''}")
                 lines.append("")
@@ -158,7 +159,7 @@ class PandocPdfRenderer(BaseRenderer):
                 for position in company.positions:
                     title_line = f"**{position.title}**"
                     if position.subtitle:
-                        title_line += f" — {position.subtitle}"
+                        title_line += f" — **{position.subtitle}**"
                     if position.start_date:
                         end = position.end_date or "Present"
                         title_line += f" *{position.start_date} – {end}*"
