@@ -1,6 +1,5 @@
 # Build output
-dist/
-dist-v2/
+dist*/
 
 # Python
 __pycache__/

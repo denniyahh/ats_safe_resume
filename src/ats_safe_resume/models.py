@@ -102,9 +102,8 @@ class Resume(BaseModel):
     @staticmethod
     def _strip_markdown(text: str) -> str:
         """Remove ** and * markers from text."""
-        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-        text = re.sub(r'\*(.+?)\*', r'\1', text)
-        return text
+        from ats_safe_resume.inline_md import _tokenize
+        return "".join(txt for txt, _, _ in _tokenize(text))
 
     @staticmethod
     def _normalize_date(date_str: Optional[str]) -> Optional[str]:
@@ -160,7 +159,7 @@ class Resume(BaseModel):
                     "url": company.url,
                     "startDate": self._normalize_date(position.start_date),
                     "endDate": self._normalize_date(position.end_date),
-                    "summary": position.summary,
+                    "summary": self._strip_markdown(position.summary) if position.summary else None,
                     "highlights": [self._strip_markdown(b) for b in position.bullets],
                 })
 

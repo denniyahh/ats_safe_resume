@@ -17,7 +17,7 @@ def _escape_typst(text: str) -> str:
     like * and _ which are intentionally used by inline_md.to_typst()).
     """
     text = text.replace("\\", "\\\\")
-    for ch in "@#$":
+    for ch in "@#$[]~`":
         text = text.replace(ch, "\\" + ch)
     text = text.replace("<", "\\<")
     text = text.replace(">", "\\>")
@@ -29,7 +29,7 @@ def _escape_typst_all(text: str) -> str:
     Used for plain-text fields that don't go through to_typst().
     """
     text = _escape_typst(text)
-    for ch in "*_`":
+    for ch in "*_":
         text = text.replace(ch, "\\" + ch)
     return text
 
@@ -58,6 +58,11 @@ class PdfRenderer(BaseRenderer):
         try:
             pdf_data = typst.compile(str(temp_path), format="pdf")
             output_path.write_bytes(pdf_data)
+        except typst.TypstError as e:
+            print(f"--- TYPST ERROR: {e} ---")
+            print(typst_source)
+            print("------------------------")
+            raise
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -104,12 +109,12 @@ class PdfRenderer(BaseRenderer):
                     loc = f" — {_esafe(company.location)}" if company.location else ""
                     lines.append(f"== {_esafe(company.name)}{loc}")
 
-                    title_line = f"*{_esafe(position.title)}*"
+                    title_line = f"#strong[{_esafe(position.title)}]"
                     if position.subtitle:
                         title_line += f" — {_esafe(position.subtitle)}"
                     if position.start_date:
                         dates = f"({_esafe(position.start_date)} – {_esafe(position.end_date) or 'Present'})"
-                        title_line += f" _{dates}_"
+                        title_line += f" #emph[{dates}]"
                     lines.append(f"#text(size: 10pt)[{title_line}]")
 
                     if position.summary:
@@ -125,13 +130,13 @@ class PdfRenderer(BaseRenderer):
             for skill in resume.technical_skills:
                 cat = _esafe(skill.category)
                 skills_text = _esafe(skill.skills)
-                lines.append(f"#text(size: 10pt)[*{cat}:* {skills_text}]")
+                lines.append(f"#text(size: 10pt)[#strong[{cat}:] {skills_text}]")
             lines.append("")
 
         if resume.education:
             lines.append("= Education")
             for edu in resume.education:
-                edu_text = f"*{_esafe(edu.institution)}*"
+                edu_text = f"#strong[{_esafe(edu.institution)}]"
                 if edu.degree:
                     edu_text += f" — {_esafe(edu.degree)}"
                 if edu.details:
