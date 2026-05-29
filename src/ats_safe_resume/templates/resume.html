@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ resume.title }}</title>
+  <style>
+    body { font-family: 'Source Sans 3', sans-serif; font-size: 10pt;
+           margin: 0.5in 0.7in; max-width: 8in; color: #333; }
+    h1 { font-size: 18pt; text-align: center; margin-bottom: 0.1em; }
+    .title-line { text-align: center; font-size: 11pt; font-weight: 600;
+                  margin-top: 0; }
+    .contact { text-align: center; font-size: 9pt; color: #555; }
+    h2 { font-size: 11pt; color: #555; text-transform: uppercase;
+         border-bottom: 1px solid #555; padding-bottom: 2px;
+         margin-top: 1em; }
+    .company { font-weight: bold; font-size: 10.5pt; margin-bottom: 0; }
+    .position { margin-bottom: 0.5em; }
+    .position-title { font-weight: bold; }
+    .dates { font-style: italic; color: #666; }
+    ul { margin: 0.2em 0; padding-left: 1.5em; }
+    li { margin-bottom: 0.15em; }
+    .skill-cat { margin-bottom: 0.2em; }
+    .skill-cat strong { font-weight: bold; }
+    footer { text-align: center; font-size: 8pt; color: #999;
+             margin-top: 2em; }
+    a { color: #555; text-decoration: none; }
+    @media print {
+      body { margin: 0.5in 0.7in; }
+    }
+  </style>
+</head>
+<body>
+  <h1>{{ resume.name }}</h1>
+  {% if resume.title_line %}
+    <p class="title-line">{{ resume.title_line }}</p>
+  {% endif %}
+  {% if resume.contact %}
+    <p class="contact">{{ resume.contact.to_ats_string() }}</p>
+  {% endif %}
+
+  {% if resume.executive_profile %}
+    <h2>Executive Profile</h2>
+    <p>{{ resume.executive_profile | inline_markdown }}</p>
+  {% endif %}
+
+  {% if resume.core_expertise %}
+    <h2>Core Expertise</h2>
+    <p>{{ resume.core_expertise | inline_markdown }}</p>
+  {% endif %}
+
+  {% if resume.companies %}
+    <h2>Professional Experience</h2>
+    {% for company in resume.companies %}
+      {% for position in company.positions %}
+        <p class="company">{{ company.name }}{% if company.location %} — {{ company.location }}{% endif %}</p>
+        <div class="position">
+          <span class="position-title">{{ position.title }}</span>{% if position.subtitle %} — {{ position.subtitle }}{% endif %}
+          {% if position.start_date %}
+            <span class="dates"> ({{ position.start_date }} – {{ position.end_date or 'Present' }})</span>
+          {% endif %}
+        </div>
+        {% if position.summary %}
+          <p>{{ position.summary | inline_markdown }}</p>
+        {% endif %}
+        {% if position.bullets %}
+          <ul>
+          {% for bullet in position.bullets %}
+            <li>{{ bullet | inline_markdown }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  {% endif %}
+
+  {% if resume.technical_skills %}
+    <h2>Technical Skills</h2>
+    {% for skill in resume.technical_skills %}
+      <p class="skill-cat"><strong>{{ skill.category }}:</strong> {{ skill.skills }}</p>
+    {% endfor %}
+  {% endif %}
+
+  {% if resume.education %}
+    <h2>Education</h2>
+    {% for edu in resume.education %}
+      <p><strong>{{ edu.institution }}</strong>{% if edu.degree %} — {{ edu.degree }}{% endif %}{% if edu.details %}, {{ edu.details }}{% endif %}</p>
+    {% endfor %}
+  {% endif %}
+
+  {% if resume.crafted_footer %}
+    <footer>crafted with <a href="https://github.com/denniyahh/ats_safe_resume">ats_safe_resume</a></footer>
+  {% endif %}
+</body>
+</html>

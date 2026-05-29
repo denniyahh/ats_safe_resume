@@ -101,7 +101,9 @@ jobs:
         with:
           context: .
           push: true
-          no-cache: true
+          no-cache: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ${{ env.DOCKER_IMAGE }}:latest
             ${{ env.DOCKER_IMAGE }}:${{ github.sha }}

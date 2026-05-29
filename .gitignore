@@ -1,5 +1,10 @@
 # Build output
 dist/
+dist-v2/
+
+# Python
+__pycache__/
+*.egg-info/
 
 # Temp files from ATS normalization
 *.tmp

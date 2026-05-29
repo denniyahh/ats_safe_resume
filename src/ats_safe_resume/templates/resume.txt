@@ -1,0 +1,58 @@
+{{ resume.name }}
+{{ "=" * (resume.name|length) }}
+
+{{ resume.title_line }}
+
+{% if resume.contact %}{{ resume.contact.to_ats_string() }}{% endif %}
+
+{% if resume.executive_profile %}
+EXECUTIVE PROFILE
+
+{{ resume.executive_profile | strip_markdown | ats_normalize }}
+{% endif %}
+
+{% if resume.core_expertise %}
+CORE EXPERTISE
+
+{{ resume.core_expertise | strip_markdown | ats_normalize }}
+{% endif %}
+
+{% if resume.companies %}
+PROFESSIONAL EXPERIENCE
+
+{% for company in resume.companies %}
+{% for position in company.positions %}
+{{ company.name }}{% if company.location %} -- {{ company.location }}{% endif %}
+  {{ position.title }}{% if position.subtitle %} -- {{ position.subtitle }}{% endif %}
+  ({{ position.start_date or '' }} - {{ position.end_date or '' }})
+{% if position.summary %}
+  {{ position.summary | strip_markdown | ats_normalize }}
+{% endif %}
+{% for bullet in position.bullets %}
+  * {{ bullet | strip_markdown | ats_normalize }}
+{% endfor %}
+
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+{% if resume.technical_skills %}
+TECHNICAL SKILLS
+
+{% for skill in resume.technical_skills %}
+  {{ skill.category }}: {{ skill.skills }}
+{% endfor %}
+{% endif %}
+
+{% if resume.education %}
+EDUCATION
+
+{% for edu in resume.education %}
+  {{ edu.institution }}{% if edu.degree %} -- {{ edu.degree }}{% endif %}{% if edu.details %}, {{ edu.details }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if resume.crafted_footer %}
+--
+crafted with ats_safe_resume (https://github.com/denniyahh/ats_safe_resume)
+{% endif %}
