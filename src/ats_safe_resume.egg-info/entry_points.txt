@@ -1,2 +1,0 @@
-[console_scripts]
-ats-safe-resume = ats_safe_resume.cli:build
