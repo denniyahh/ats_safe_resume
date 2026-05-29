@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ats_safe_resume.parser import parse
 from ats_safe_resume.models import Resume
-from ats_safe_resume.renderers.pdf import PdfRenderer
+from ats_safe_resume.renderers import PdfRenderer
 from ats_safe_resume.renderers.docx import DocxRenderer
 from ats_safe_resume.renderers.html import HtmlRenderer
 from ats_safe_resume.renderers.txt import TxtRenderer
