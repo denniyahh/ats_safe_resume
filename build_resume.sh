@@ -343,6 +343,7 @@ if 'Professional Experience' in sections:
         # Lines 1+: roles and bullets
         current_position = None
         current_highlights = []
+        current_date = ""
         role_lines = lines[1:]
 
         for rl in role_lines:
@@ -354,18 +355,30 @@ if 'Professional Experience' in sections:
             if role_match:
                 # Save previous role if exists
                 if current_position:
-                    entry.setdefault("positions", []).append({
-                        "position": current_position,
-                        "highlights": current_highlights
-                    })
+                    pos = {"position": current_position, "highlights": current_highlights}
+                    if current_date:
+                        pos["startDate"] = current_date
+                    entry.setdefault("positions", []).append(pos)
                 current_position = role_match.group(1).strip()
-                # Check next line for date range
                 sub = role_match.group(2).strip()
                 current_highlights = []
+                # Check if date is inline in subtitle (e.g., "(2005–2007)")
+                inline_date = re.search(r'\((\d{4}\s*[–-]\s*\d{4})\)', sub)
+                if not inline_date:
+                    inline_date = re.search(r'\((\w+\s+\d{4}\s*[–-]\s*(?:\w+\s+\d{4}|Present))\)', sub)
+                if inline_date:
+                    current_date = inline_date.group(1).strip()
+                    # Remove date from subtitle
+                    sub = sub[:inline_date.start()] + sub[inline_date.end():]
+                # Use subtitle as department/team
+                if sub.strip():
+                    current_department = sub.strip().strip('(').strip(')').strip()
+                continue
             # Date line: *Jun 2021 – Present*
             date_match = re.match(r'^\*(.+?)\*$', rl)
             if date_match:
-                entry["startDate"] = date_match.group(1).strip()
+                current_date = date_match.group(1).strip()
+                continue
             # Bullet point: - something
             bullet_match = re.match(r'^- (.+)$', rl)
             if bullet_match:
@@ -374,10 +387,10 @@ if 'Professional Experience' in sections:
 
         # Save last role
         if current_position:
-            entry.setdefault("positions", []).append({
-                "position": current_position,
-                "highlights": current_highlights
-            })
+            pos = {"position": current_position, "highlights": current_highlights}
+            if current_date:
+                pos["startDate"] = current_date
+            entry.setdefault("positions", []).append(pos)
         # Add all highlights to top-level for broad compatibility
         all_highlights = []
         for pos in entry.get("positions", []):
@@ -570,13 +583,21 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
         cat "$DOCX_INPUT" "$SCRIPT_DIR/crafted-footer.md" > "$TMP_DOCX_FOOTER"
         DOCX_INPUT="$TMP_DOCX_FOOTER"
       fi
+      # Strip metadata title to avoid duplicate (H1 already has the name)
+      TMP_DOCX_CLEAN="$(mktemp /tmp/resume_clean_XXXXXX.md)"
+      python3 -c "
+import re, sys
+t = open(sys.argv[1]).read()
+t = re.sub(r'^---\s*\n.*?\n---\s*\n', '', t, count=1, flags=re.DOTALL)
+open(sys.argv[2], 'w').write(t)
+" "$DOCX_INPUT" "$TMP_DOCX_CLEAN"
+      DOCX_INPUT="$TMP_DOCX_CLEAN"
       pandoc "$DOCX_INPUT" \
         -o "${OUT_DIR}/${BASENAME}.docx" \
-        --metadata=title:"$TITLE" \
         --standalone \
         --reference-doc="$SCRIPT_DIR/reference.docx"
 
-      [[ -n "${TMP_DOCX}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_DOCX"
+      [[ -n "${TMP_DOCX}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_DOCX" "$TMP_DOCX_CLEAN"
       [[ -n "${TMP_DOCX_FOOTER}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_DOCX_FOOTER"
       ;;
 
@@ -612,13 +633,21 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
         cat "$TXT_INPUT" "$SCRIPT_DIR/crafted-footer.md" > "$TMP_TXT_FOOTER"
         TXT_INPUT="$TMP_TXT_FOOTER"
       fi
+      # Strip YAML frontmatter to avoid title repetition
+      TMP_TXT_CLEAN="$(mktemp /tmp/resume_clean_XXXXXX.md)"
+      python3 -c "
+import re, sys
+t = open(sys.argv[1]).read()
+t = re.sub(r'^---\s*\n.*?\n---\s*\n', '', t, count=1, flags=re.DOTALL)
+open(sys.argv[2], 'w').write(t)
+" "$TXT_INPUT" "$TMP_TXT_CLEAN"
+      TXT_INPUT="$TMP_TXT_CLEAN"
       pandoc "$TXT_INPUT" \
         -o "${OUT_DIR}/${BASENAME}.txt" \
-        --metadata=title:"$TITLE" \
         --standalone \
         -t plain
 
-      [[ -n "${TMP_TXT}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_TXT"
+      [[ -n "${TMP_TXT}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_TXT" "$TMP_TXT_CLEAN"
       [[ -n "${TMP_TXT_FOOTER}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_TXT_FOOTER"
       ;;
 
