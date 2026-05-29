@@ -144,11 +144,15 @@ class DocxRenderer(BaseRenderer):
         self._add_markdown_runs(p, text, size)
 
     def _add_markdown_runs(self, paragraph, text: str, size: Pt | None = None) -> None:
-        """Add runs with **bold** and *italic* handling."""
-        for token_text, is_bold, is_italic in inline_md.to_docx_runs(text):
+        """Add runs with **bold**, *italic*, and links handling."""
+        from docx.shared import RGBColor
+        for token_text, is_bold, is_italic, url in inline_md.to_docx_runs(text):
             run = paragraph.add_run(token_text)
             run.bold = is_bold
             run.italic = is_italic
             run.font.name = 'Source Sans 3'
             if size:
                 run.font.size = size
+            if url:
+                run.font.underline = True
+                run.font.color.rgb = RGBColor(0x55, 0x55, 0x55)

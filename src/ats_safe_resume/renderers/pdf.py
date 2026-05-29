@@ -14,10 +14,11 @@ def _escape_typst(text: str) -> str:
     """Escape Typst-special characters in plain text.
 
     Only escapes characters that cause *parser* errors (not formatting sigils
-    like * and _ which are intentionally used by inline_md.to_typst()).
+    like * and _ which are intentionally used by inline_md.to_typst(),
+    nor [ and ] which are needed for markdown links).
     """
     text = text.replace("\\", "\\\\")
-    for ch in "@#$[]~`":
+    for ch in "@#$~`":
         text = text.replace(ch, "\\" + ch)
     text = text.replace("<", "\\<")
     text = text.replace(">", "\\>")
@@ -25,11 +26,11 @@ def _escape_typst(text: str) -> str:
 
 
 def _escape_typst_all(text: str) -> str:
-    """Escape all Typst-special characters including * and _.
+    """Escape all Typst-special characters including *, _, [, ].
     Used for plain-text fields that don't go through to_typst().
     """
     text = _escape_typst(text)
-    for ch in "*_":
+    for ch in "*_[]":
         text = text.replace(ch, "\\" + ch)
     return text
 

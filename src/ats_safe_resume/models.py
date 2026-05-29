@@ -102,8 +102,8 @@ class Resume(BaseModel):
     @staticmethod
     def _strip_markdown(text: str) -> str:
         """Remove ** and * markers from text."""
-        from ats_safe_resume.inline_md import _tokenize
-        return "".join(txt for txt, _, _ in _tokenize(text))
+        from ats_safe_resume.inline_md import strip_markdown
+        return strip_markdown(text)
 
     @staticmethod
     def _normalize_date(date_str: Optional[str]) -> Optional[str]:
