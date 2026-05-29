@@ -159,21 +159,25 @@ class PandocPdfRenderer(BaseRenderer):
                     title_line = f"**{position.title}**"
                     if position.subtitle:
                         title_line += f" — {position.subtitle}"
-                    lines.append(title_line)
-
                     if position.start_date:
                         end = position.end_date or "Present"
-                        lines.append(f"*{position.start_date} – {end}*")
-                    lines.append("")
+                        title_line += f" *{position.start_date} – {end}*"
+                    lines.append(title_line)
 
-                    if position.summary:
+                    # For Earlier Experience-style entries (no bullets, has summary):
+                    # merge summary into same paragraph as title
+                    if position.summary and not position.bullets:
+                        lines[-1] = lines[-1] + " " + position.summary
+                    elif position.summary:
                         lines.append(position.summary)
-                        lines.append("")
 
-                    for bullet in position.bullets:
-                        stripped = re.sub(r'\*\*(.+?)\*\*', r'**\1**', bullet)  # preserve bold
-                        lines.append(f"- {stripped}")
-                    lines.append("")
+                    if position.bullets:
+                        lines.append("")  # blank line before list
+                        for bullet in position.bullets:
+                            stripped = re.sub(r'\*\*(.+?)\*\*', r'**\1**', bullet)
+                            lines.append(f"- {stripped}")
+
+                lines.append("")  # blank line between companies
 
         # ── Technical Skills ─────────────────────────────────────
         if resume.technical_skills:
