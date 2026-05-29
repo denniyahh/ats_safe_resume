@@ -165,12 +165,11 @@ class PandocPdfRenderer(BaseRenderer):
                         title_line += f" *{position.start_date} – {end}*"
                     lines.append(title_line)
 
-                    # For Earlier Experience-style entries (no bullets, no dates, has summary):
+                    # For Earlier Experience-style entries (no bullets, has summary):
                     # merge summary into same paragraph as title
-                    if position.summary and not position.bullets and not position.start_date:
+                    if position.summary and not position.bullets:
                         lines[-1] = lines[-1] + " " + position.summary
                     elif position.summary:
-                        lines.append("")
                         lines.append(position.summary)
 
                     if position.bullets:
