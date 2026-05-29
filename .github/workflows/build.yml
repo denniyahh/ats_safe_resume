@@ -58,6 +58,17 @@ jobs:
           pip3 install python-docx -q
           ./validate_outputs.py example/resume.md
 
+      - name: Build v2 pipeline
+        run: |
+          pip3 install -e . -q
+          python3 -m ats_safe_resume example/resume.md --out-dir dist-v2
+
+      - name: Parity test (v1 vs v2)
+        run: |
+          pip3 install pydantic pyyaml python-docx jinja2 typst -q
+          pip3 install -e . -q
+          python3 -m pytest tests/test_v1_v2_parity.py -v
+
       - name: Copy demo PDF to tracked location
         run: cp dist/resume.pdf example/resume.pdf
 
@@ -66,6 +77,13 @@ jobs:
         with:
           name: resume-outputs
           path: dist/
+          retention-days: 90
+
+      - name: Upload v2 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: resume-outputs-v2
+          path: dist-v2/
           retention-days: 90
 
       - name: Commit demo PDF
