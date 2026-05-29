@@ -516,6 +516,7 @@ metadata:
 include-in-header:
   - $THEME_FILE
   - $SCRIPT_DIR/resume-preamble.tex
+include-after-body:
 $CRAFTED_FOOTER_INCLUDE
 DEFAULTS
 
