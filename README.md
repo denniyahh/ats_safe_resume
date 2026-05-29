@@ -13,6 +13,37 @@ A modern, programmatic resume template that produces clean PDFs that pass applic
 
 ---
 
+## 🚧 v2 Upgrade In Progress
+
+**We're migrating from a Pandoc-based pipeline to a single-parse, multi-render architecture.** The v1 pipeline (Pandoc → PDF/DOCX/HTML/TXT + bash → JSON) runs 5 independent parses of the same markdown, which caused format-specific bugs: title duplication, double-escaped HTML entities, overwritten dates, and invisible footers.
+
+**v2 fixes this for good:**
+
+```
+resume.md → Pydantic Parser → canonical JSON → Typst PDF / DOCX / HTML / TXT
+                 (parse once)                           (dedicated renderers)
+```
+
+| Before (v1) | After (v2) |
+|---|---|
+| 5 independent parses (Pandoc + bash) | 1 parse into a typed data model |
+| LaTeX engine (1.5GB install) | Typst (~30MB, deterministic output) |
+| Format-specific bugs compound over time | One fix in the data model fixes all formats |
+| Manual output validation | Automated property-based testing |
+
+**Current status:** The v2 pipeline is built and running alongside v1 (output goes to `dist-v2/`). The `ats-safe-resume` CLI accepts the same markdown format with zero UX change.
+
+**Remaining work:**
+- CI integration (run both pipelines, validate parity)
+- Parser edge cases (markdown URLs in some section headings)
+- Property-based testing (Hypothesis) for Phase 2
+- Cutover: switch default pipeline from v1 to v2, remove Pandoc/LaTeX dependencies
+- Simplified Docker image (~100MB instead of ~1.2GB)
+
+Full architecture: [ARCHITECTURE_V2.md](ARCHITECTURE_V2.md) · Implementation plan: [PLAN_PHASE1.md](PLAN_PHASE1.md)
+
+---
+
 ## Quick Start — Zero Install
 
 **No Pandoc. No LaTeX. No terminal needed.**
