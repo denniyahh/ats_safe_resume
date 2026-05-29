@@ -239,7 +239,7 @@ if current_section:
     sections[current_section] = '\n'.join(current_content).strip()
 
 # Build JSON Resume schema
-resume = {"basics": {}, "work": [], "education": [], "skills": []}
+resume = {"basics": {}, "work": [], "skills": [], "education": []}
 
 # ── Basics ──────────────────────────────────────────────────────
 lines = text.strip().split('\n')
@@ -388,6 +388,20 @@ if 'Professional Experience' in sections:
         if entry.get("company") or entry.get("positions"):
             resume["work"].append(entry)
 
+# ── Skills ──────────────────────────────────────────────────────
+if 'Technical Skills' in sections:
+    skills_text = sections['Technical Skills']
+    for line in skills_text.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        cat_match = re.match(r'^\*\*(.+?):?\*\*\s*(.+)$', line)
+        if cat_match:
+            name = cat_match.group(1).strip().rstrip(':').strip()
+            kw = cat_match.group(2).strip()
+            keywords = [k.strip() for k in re.split(r'[,;]', kw) if k.strip()]
+            resume["skills"].append({"name": name, "keywords": keywords})
+
 # ── Education ───────────────────────────────────────────────────
 if 'Education' in sections:
     edu_text = sections['Education']
@@ -402,21 +416,6 @@ if 'Education' in sections:
             entry["studyType"] = name_match.group(2).strip()
         if entry:
             resume["education"].append(entry)
-
-# ── Skills ──────────────────────────────────────────────────────
-if 'Technical Skills' in sections:
-    skills_text = sections['Technical Skills']
-    for line in skills_text.split('\n'):
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue
-        cat_match = re.match(r'^\*\*(.+?):?\*\*\s*(.+)$', line)
-        if cat_match:
-            name = cat_match.group(1).strip().rstrip(':').strip()
-            kw = cat_match.group(2).strip()
-            # Split keywords, handle comma+space variations
-            keywords = [k.strip() for k in re.split(r'[,;]', kw) if k.strip()]
-            resume["skills"].append({"name": name, "keywords": keywords})
 
 Path(sys.argv[2]).write_text(json.dumps(resume, indent=2), encoding="utf-8")
 print(f"  JSON Resume written: {sys.argv[2]}")
@@ -564,6 +563,13 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
         normalize_md_for_ats "$INPUT_MD" "$TMP_DOCX"
         DOCX_INPUT="$TMP_DOCX"
       fi
+      # Append crafted footer if enabled
+      TMP_DOCX_FOOTER=""
+      if [[ "${CRAFTED_FOOTER,,}" == "true" ]]; then
+        TMP_DOCX_FOOTER="$(mktemp /tmp/resume_footer_XXXXXX.md)"
+        cat "$DOCX_INPUT" "$SCRIPT_DIR/crafted-footer.md" > "$TMP_DOCX_FOOTER"
+        DOCX_INPUT="$TMP_DOCX_FOOTER"
+      fi
       pandoc "$DOCX_INPUT" \
         -o "${OUT_DIR}/${BASENAME}.docx" \
         --metadata=title:"$TITLE" \
@@ -571,14 +577,24 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
         --reference-doc="$SCRIPT_DIR/reference.docx"
 
       [[ -n "${TMP_DOCX}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_DOCX"
+      [[ -n "${TMP_DOCX_FOOTER}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_DOCX_FOOTER"
       ;;
 
     html)
       echo "Building HTML..."
-      pandoc "$INPUT_MD" \
+      HTML_INPUT="$INPUT_MD"
+      TMP_HTML_FOOTER=""
+      if [[ "${CRAFTED_FOOTER,,}" == "true" ]]; then
+        TMP_HTML_FOOTER="$(mktemp /tmp/resume_footer_XXXXXX.md)"
+        cat "$INPUT_MD" "$SCRIPT_DIR/crafted-footer.md" > "$TMP_HTML_FOOTER"
+        HTML_INPUT="$TMP_HTML_FOOTER"
+      fi
+      pandoc "$HTML_INPUT" \
         -o "${OUT_DIR}/${BASENAME}.html" \
         --metadata=title:"$TITLE" \
         --standalone
+
+      [[ -n "${TMP_HTML_FOOTER}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_HTML_FOOTER"
       ;;
 
     txt)
@@ -590,6 +606,12 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
         normalize_md_for_ats "$INPUT_MD" "$TMP_TXT"
         TXT_INPUT="$TMP_TXT"
       fi
+      TMP_TXT_FOOTER=""
+      if [[ "${CRAFTED_FOOTER,,}" == "true" ]]; then
+        TMP_TXT_FOOTER="$(mktemp /tmp/resume_footer_XXXXXX.md)"
+        cat "$TXT_INPUT" "$SCRIPT_DIR/crafted-footer.md" > "$TMP_TXT_FOOTER"
+        TXT_INPUT="$TMP_TXT_FOOTER"
+      fi
       pandoc "$TXT_INPUT" \
         -o "${OUT_DIR}/${BASENAME}.txt" \
         --metadata=title:"$TITLE" \
@@ -597,6 +619,7 @@ for format in $(echo "$FORMATS" | tr ',' ' '); do
         -t plain
 
       [[ -n "${TMP_TXT}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_TXT"
+      [[ -n "${TMP_TXT_FOOTER}" && "$KEEP_TMP" != "1" ]] && rm -f "$TMP_TXT_FOOTER"
       ;;
 
     json)
