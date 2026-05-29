@@ -71,8 +71,22 @@ class PdfRenderer(BaseRenderer):
         lines = []
 
         # Page setup
-        lines.append('#set page("a4", margin: (left: 0.7in, right: 0.7in, top: 0.5in, bottom: 0.5in))')
+        lines.append('#set page("us-letter", margin: (left: 0.7in, right: 0.7in, top: 0.5in, bottom: 0.5in))')
         lines.append('#set text(font: "Source Sans 3", size: 10pt)')
+        lines.append('#set par(leading: 0.5em, spacing: 0.65em)')
+        lines.append('#set list(tight: true, spacing: 0.65em, indent: 1em)')
+        lines.append('#show link: set text(fill: rgb("555555"))')
+        lines.append('#show heading.where(level: 1): it => {')
+        lines.append('  set text(size: 12pt, fill: rgb("555555"))')
+        lines.append('  block[#it.body]')
+        lines.append('  v(-0.3em)')
+        lines.append('  line(length: 100%, stroke: 0.3pt + rgb("555555").lighten(60%))')
+        lines.append('  v(0.3em)')
+        lines.append('}')
+        lines.append('#show heading.where(level: 2): it => {')
+        lines.append('  set text(size: 10pt, fill: rgb("555555"))')
+        lines.append('  block[#it.body]')
+        lines.append('}')
         lines.append("")
 
         # Name
@@ -85,7 +99,16 @@ class PdfRenderer(BaseRenderer):
 
         # Contact
         if resume.contact:
-            contact_text = _esafe(resume.contact.to_ats_string())
+            parts = []
+            if resume.contact.city_state: parts.append(_esafe(resume.contact.city_state))
+            if resume.contact.email: parts.append(f'#link("mailto:{resume.contact.email}")[{_esafe(resume.contact.email)}]')
+            if resume.contact.phone: parts.append(_esafe(resume.contact.phone))
+            if resume.contact.linkedin: parts.append(f'#link("{resume.contact.linkedin}")[LinkedIn]')
+            if resume.contact.github: parts.append(f'#link("{resume.contact.github}")[GitHub]')
+            if resume.contact.website: parts.append(f'#link("{resume.contact.website}")[Website]')
+            for other in resume.contact.other:
+                parts.append(_esafe(other))
+            contact_text = " | ".join(parts)
             lines.append(f"#align(center, text(size: 9pt)[{contact_text}])")
 
         lines.append("")
