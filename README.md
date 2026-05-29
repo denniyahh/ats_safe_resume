@@ -1,7 +1,7 @@
 # ATS Safe Resume
 
-[![Built with Pandoc](https://img.shields.io/badge/built%20with-pandoc-blueviolet)](https://pandoc.org/)
-[![LaTeX](https://img.shields.io/badge/engine-lualatex%20|%20xelatex%20|%20tectonic-green)](https://www.latex-project.org/)
+[![Built with Python](https://img.shields.io/badge/built%20with-python-blue)](https://python.org/)
+[![Typst](https://img.shields.io/badge/engine-typst-239DAD)](https://typst.app/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
@@ -54,14 +54,7 @@ If you want to build locally without installing LaTeX:
 
 ```bash
 # Build your resume with one command
-docker run --rm -w /data -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest /data/resume.md
-```
-
-Or use the convenience wrapper:
-
-```bash
-./build_docker.sh                  # default: resume.md
-./build_docker.sh path/to/resume.md
+docker run --rm -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest /data/resume.md
 ```
 
 ---
@@ -81,16 +74,6 @@ ats-safe-resume resume.md
 # Outputs in dist/
 ls dist/   # resume.pdf  resume.docx  resume.html  resume.txt  resume.json
 ```
-
-### Legacy v1 Pipeline (Pandoc + LuaLaTeX)
-
-If you need the legacy Pandoc-based pipeline (macOS with TeX, etc.):
-
-```bash
-FORMAT_ENGINE=v1 ./build_resume.sh
-```
-
-Requires: `pandoc`, `texlive-latex-extra`, `texlive-luatex`, Source Sans 3 fonts.
 
 ---
 
@@ -196,10 +179,6 @@ ATS_SAFE=0 ./build_resume.sh
 
 Install: `pip install -e .` (from the repo root).
 
-### Legacy v1
-
-Uses Pandoc + LuaLaTeX. See `FORMAT_ENGINE=v1` above. Install size ~1.5GB.
-
 ### Docker (no local install needed)
 
 See **Quick Start — Docker** above.
@@ -213,23 +192,20 @@ ats_safe_resume/
 ├── example/
 │   ├── resume.md            # Template — edit this
 │   └── resume.pdf           # Committed demo (auto-updated by CI)
-├── templates/
-│   └── eisvogel.latex       # Self-contained Pandoc LaTeX template
-├── themes/
-│   ├── dark.tex             # Dark gray (default)
-│   ├── navy.tex             # Navy blue
-│   ├── teal.tex             # Teal accent
-│   ├── burgundy.tex         # Burgundy accent
-│   └── minimal.tex          # Black/minimal
-├── reference.docx           # Reference DOCX for styled Word output
-├── resume-preamble.tex      # LaTeX preamble (accent bars, spacing)
-├── pandoc-defaults.yaml     # Pandoc defaults file
+├── src/ats_safe_resume/
+│   ├── models.py            # Pydantic data model
+│   ├── parser.py            # Markdown parser
+│   ├── renderers/           # PDF, DOCX, HTML, TXT, JSON renderers
+│   ├── cli.py               # CLI entry point
+│   └── templates/           # Jinja2 templates
+├── tests/
+│   └── ...                  # Unit + integration tests
 ├── build_resume.sh          # Build script
-├── build_docker.sh          # Docker wrapper
-├── Dockerfile               # Docker image (pinned versions)
+├── Dockerfile               # Docker image (python:3.12-slim + typst)
 ├── AI_INSTRUCTIONS.md       # AI assistant instructions
 ├── .github/workflows/
 │   └── build.yml            # CI: builds PDF + publishes Docker image
+├── pyproject.toml           # Python package config
 ├── LICENSE                  # MIT
 └── README.md
 ```
@@ -247,25 +223,9 @@ ats_safe_resume/
 # Override output directory
 OUT_DIR=output ./build_resume.sh
 
-# Override base filename
-BASENAME=jane-doe-resume ./build_resume.sh
-
-# Force a specific PDF engine
-PDF_ENGINE=xelatex ./build_resume.sh
-
-# Disable ATS normalization
-ATS_SAFE=0 ./build_resume.sh
-
-# Keep the normalized temp file for inspection
-KEEP_TMP=1 ./build_resume.sh
-
 # Select output formats
 FORMATS=pdf,json ./build_resume.sh
 ```
-
-### Custom Pandoc Defaults
-
-Create a `pandoc-defaults.user.yaml` in the repo root to override any Pandoc setting without modifying repo files. The build script does not touch this file.
 
 ---
 
@@ -274,11 +234,11 @@ Create a `pandoc-defaults.user.yaml` in the repo root to override any Pandoc set
 **Q: The PDF looks different from the example.**
 A: Most likely a missing font. Install Source Sans 3 and Source Code Pro, or use the Docker build.
 
-**Q: LaTeX errors on build.**
-A: Ensure all texlive packages are installed (see Dependencies). For Ubuntu, `texlive-latex-extra` is required for KOMA-script and Eisvogel template features.
-
 **Q: Font "Source Sans 3" not found error.**
-A: Install the fonts (see Dependencies by OS). On older Linux systems, the package is called `fonts-source-sans-pro`. Use the Docker build to avoid font issues entirely.
+A: Install the fonts (see Dependencies). Use the Docker build to avoid font issues entirely.
+
+**Q: Build fails with import errors.**
+A: Run `pip install -e .` from the repo root to install all Python dependencies.
 
 **Q: Can I use a different font?**
 A: Yes — set `mainfont` and `monofont` in the YAML frontmatter. The font must be installed on your system (or in the Docker image).

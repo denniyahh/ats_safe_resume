@@ -42,13 +42,13 @@ jobs:
           fc-cache -f ~/.fonts/
 
       - name: Install Python deps
-        run: pip3 install -e . -q
+        run: pip3 install -e . -q && pip3 install pytest -q
 
       - name: Build resume
         run: python3 -m ats_safe_resume example/resume.md --out-dir dist
 
       - name: Validate all outputs
-        run: python3 -m pytest tests/test_v1_v2_parity.py tests/test_parser.py tests/test_models.py -v
+        run: python3 -m pytest tests/test_parser.py tests/test_models.py -v
 
       - name: Copy demo PDF to tracked location
         run: cp dist/resume.pdf example/resume.pdf
