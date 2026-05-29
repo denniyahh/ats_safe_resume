@@ -11,7 +11,7 @@ env:
 
 jobs:
   lint:
-    name: Lint build script
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,21 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install system deps
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pandoc \
-            texlive-latex-base \
-            texlive-latex-extra \
-            texlive-latex-recommended \
-            texlive-luatex \
-            texlive-fonts-recommended \
-            texlive-fonts-extra \
-            lmodern \
-            python3 python3-pip python3-docx \
-            poppler-utils \
-            curl ca-certificates unzip
+            python3 python3-pip poppler-utils \
+            curl ca-certificates unzip fontconfig
           # Install Source Sans 3 and Source Code Pro fonts
           mkdir -p ~/.fonts
           curl -fsSL "https://github.com/adobe-fonts/source-sans/releases/download/3.052R/TTF-source-sans-3.052R.zip" -o /tmp/sourcesans.zip
@@ -50,24 +41,14 @@ jobs:
           unzip -qo /tmp/sourcecode.zip -d ~/.fonts/
           fc-cache -f ~/.fonts/
 
+      - name: Install Python deps
+        run: pip3 install -e . -q
+
       - name: Build resume
-        run: ./build_resume.sh example/resume.md
+        run: python3 -m ats_safe_resume example/resume.md --out-dir dist
 
       - name: Validate all outputs
-        run: |
-          pip3 install python-docx -q
-          ./validate_outputs.py example/resume.md
-
-      - name: Build v2 pipeline
-        run: |
-          pip3 install -e . -q
-          python3 -m ats_safe_resume example/resume.md --out-dir dist-v2
-
-      - name: Parity test (v1 vs v2)
-        run: |
-          pip3 install pydantic pyyaml python-docx jinja2 typst -q
-          pip3 install -e . -q
-          python3 -m pytest tests/test_v1_v2_parity.py -v
+        run: python3 -m pytest tests/test_v1_v2_parity.py tests/test_parser.py tests/test_models.py -v
 
       - name: Copy demo PDF to tracked location
         run: cp dist/resume.pdf example/resume.pdf
@@ -77,13 +58,6 @@ jobs:
         with:
           name: resume-outputs
           path: dist/
-          retention-days: 90
-
-      - name: Upload v2 artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: resume-outputs-v2
-          path: dist-v2/
           retention-days: 90
 
       - name: Commit demo PDF

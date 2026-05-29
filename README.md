@@ -13,32 +13,23 @@ A modern, programmatic resume template that produces clean PDFs that pass applic
 
 ---
 
-## 🚧 v2 Upgrade In Progress
+## v2 Architecture (Current)
 
-**We're migrating from a Pandoc-based pipeline to a single-parse, multi-render architecture.** The v1 pipeline (Pandoc → PDF/DOCX/HTML/TXT + bash → JSON) runs 5 independent parses of the same markdown, which caused format-specific bugs: title duplication, double-escaped HTML entities, overwritten dates, and invisible footers.
+**Single-parse, multi-render pipeline.** The v1 pipeline ran 5 independent parses of the same markdown (Pandoc + bash regex), which caused format-specific bugs: title duplication, double-escaped HTML entities, overwritten dates, and invisible footers.
 
 **v2 fixes this for good:**
 
 ```
 resume.md → Pydantic Parser → canonical JSON → Typst PDF / DOCX / HTML / TXT
-                 (parse once)                           (dedicated renderers)
+               (parse once)                         (dedicated renderers)
 ```
 
 | Before (v1) | After (v2) |
 |---|---|
 | 5 independent parses (Pandoc + bash) | 1 parse into a typed data model |
-| LaTeX engine (1.5GB install) | Typst (~30MB, deterministic output) |
-| Format-specific bugs compound over time | One fix in the data model fixes all formats |
+| LaTeX engine (~1.5GB install) | Typst (~30MB, deterministic output) |
+| Format-specific bugs compound | One fix in the data model fixes all formats |
 | Manual output validation | Automated property-based testing |
-
-**Current status:** The v2 pipeline is built and running alongside v1 (output goes to `dist-v2/`). The `ats-safe-resume` CLI accepts the same markdown format with zero UX change.
-
-**Remaining work:**
-- CI integration (run both pipelines, validate parity)
-- Parser edge cases (markdown URLs in some section headings)
-- Property-based testing (Hypothesis) for Phase 2
-- Cutover: switch default pipeline from v1 to v2, remove Pandoc/LaTeX dependencies
-- Simplified Docker image (~100MB instead of ~1.2GB)
 
 Full architecture: [ARCHITECTURE_V2.md](ARCHITECTURE_V2.md) · Implementation plan: [PLAN_PHASE1.md](PLAN_PHASE1.md)
 
@@ -77,19 +68,29 @@ Or use the convenience wrapper:
 
 ## Quick Start — Native (Local Build)
 
-If you have Pandoc and LaTeX installed:
-
 ```bash
-# Install dependencies (Fedora)
-sudo dnf install pandoc texlive-scheme-medium texlive-luatex \
-  adobe-source-sans-pro-fonts adobe-source-code-pro-fonts
+# Install Python dependencies
+pip install -e .
 
 # Build all formats
 ./build_resume.sh
 
+# Or directly:
+ats-safe-resume resume.md
+
 # Outputs in dist/
 ls dist/   # resume.pdf  resume.docx  resume.html  resume.txt  resume.json
 ```
+
+### Legacy v1 Pipeline (Pandoc + LuaLaTeX)
+
+If you need the legacy Pandoc-based pipeline (macOS with TeX, etc.):
+
+```bash
+FORMAT_ENGINE=v1 ./build_resume.sh
+```
+
+Requires: `pandoc`, `texlive-latex-extra`, `texlive-luatex`, Source Sans 3 fonts.
 
 ---
 
@@ -180,42 +181,28 @@ ATS_SAFE=0 ./build_resume.sh
 
 ## Dependencies
 
-### Native (installed on your machine)
+### Native (v2 — Python + Typst)
 
 | Tool | Required | Notes |
 |------|----------|-------|
-| `pandoc` | ✅ | Document conversion |
-| `lualatex` / `xelatex` / `tectonic` | ✅ | PDF engine (auto-detected) |
+| Python 3.10+ | ✅ | Parser, renderers, CLI |
+| `typst` (Python pkg) | ✅ | PDF generation (~30MB) |
+| `pydantic` | ✅ | Data model |
+| `python-docx` | ✅ | DOCX generation |
+| `jinja2` | ✅ | HTML/TXT templates |
+| `pyyaml` | ✅ | Frontmatter parsing |
 | Source Sans 3 | ✅ | Primary font |
 | Source Code Pro | ✅ | Monospace font |
-| Python 3 | ✅ | ATS normalization, JSON generation |
 
-### Install by OS
+Install: `pip install -e .` (from the repo root).
 
-**Fedora / RHEL:**
-```bash
-sudo dnf install pandoc texlive-scheme-medium texlive-luatex \
-  adobe-source-sans-pro-fonts adobe-source-code-pro-fonts python3
-```
+### Legacy v1
 
-**Ubuntu / Debian:**
-```bash
-sudo apt-get install pandoc texlive-latex-base texlive-latex-extra \
-  texlive-luatex texlive-fonts-recommended texlive-fonts-extra \
-  fonts-source-sans-pro fonts-source-code-pro python3
-```
-
-**macOS (Homebrew):**
-```bash
-brew install pandoc tectonic
-brew install --cask mactex-no-gui  # or basictex + extra packages
-```
-
-**Windows:** Use [WSL](https://learn.microsoft.com/en-us/windows/wsl/) with Ubuntu, then follow Ubuntu instructions.
+Uses Pandoc + LuaLaTeX. See `FORMAT_ENGINE=v1` above. Install size ~1.5GB.
 
 ### Docker (no local install needed)
 
-See **Quick Start — Docker** above. The Docker image includes all dependencies.
+See **Quick Start — Docker** above.
 
 ---
 

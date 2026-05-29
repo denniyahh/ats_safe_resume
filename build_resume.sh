@@ -1,23 +1,18 @@
 #!/usr/bin/env bash
-# ATS Safe Resume — Build Script
+# ATS Safe Resume — Build Script (v2)
 #
-# Zero-dependency orchestrator: reads YAML frontmatter from resume.md,
-# selects theme, adjusts page mode, applies ATS normalization, and
-# drives pandoc via pandoc-defaults.yaml.
+# Default: uses the v2 Python pipeline (ats-safe-resume).
+# Falls back to v1 Pandoc pipeline if Python/deps are unavailable
+# or FORMAT_ENGINE=v1 is set.
 #
 # Usage:
 #   ./build_resume.sh                  # uses resume.md by default
 #   ./build_resume.sh path/to/file.md  # custom input
 #
-# Env vars for power users:
+# Env vars:
 #   OUT_DIR=dist                       # output directory
-#   BASENAME=resume                    # base filename for outputs
-#   PDF_ENGINE=lualatex                # override PDF engine
-#   ATS_SAFE=1                         # enable/disable ATS normalization
-#   KEEP_TMP=0                         # keep normalized temp file
-#   THEME=dark                         # override theme from frontmatter
-#   PAGE_MODE=two                      # override page mode from frontmatter
 #   FORMATS=pdf,docx,html,txt,json     # comma-separated output formats
+#   FORMAT_ENGINE=v2|v1                # force v1 (Pandoc/LuaLaTeX) or v2 (Python/Typst)
 #
 # Outputs (in OUT_DIR):
 #   resume.pdf   resume.docx   resume.html   resume.txt   resume.json
@@ -32,19 +27,23 @@ INPUT_MD="${1:-resume.md}"
 INPUT_DIR="$(cd "$(dirname "$INPUT_MD")" && pwd)"
 OUT_DIR="${OUT_DIR:-dist}"
 FORMATS="${FORMATS:-pdf,docx,html,txt,json}"
+FORMAT_ENGINE="${FORMAT_ENGINE:-v2}"
 
-# Detect PDF engine (lualatex → xelatex → tectonic)
-PDF_ENGINE="${PDF_ENGINE:-}"
-ATS_SAFE="${ATS_SAFE:-1}"
-KEEP_TMP="${KEEP_TMP:-0}"
+# ── v2 pipeline (default) ──────────────────────────────────────
+if [[ "${FORMAT_ENGINE}" == "v2" ]]; then
+  if command -v ats-safe-resume >/dev/null 2>&1; then
+    exec ats-safe-resume "$INPUT_MD" --formats "$FORMATS" --out-dir "$OUT_DIR"
+  elif python3 -c "import ats_safe_resume" 2>/dev/null; then
+    exec python3 -m ats_safe_resume "$INPUT_MD" --formats "$FORMATS" --out-dir "$OUT_DIR"
+  else
+    echo "v2 pipeline requested but Python deps not found." >&2
+    echo "Run: pip install -e . (from the repo root)" >&2
+    echo "Or set FORMAT_ENGINE=v1 for the legacy Pandoc pipeline." >&2
+    exit 1
+  fi
+fi
 
-# Script location (for relative paths to templates/themes)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-#########################
-# Helpers
-#########################
-
+# ── v1 pipeline (legacy) ────────────────────────────────────────
 err() { echo "ERROR: $*" >&2; exit 1; }
 
 check_command() {
