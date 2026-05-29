@@ -39,7 +39,8 @@ jobs:
             texlive-fonts-recommended \
             texlive-fonts-extra \
             lmodern \
-            python3 \
+            python3 python3-pip python3-docx \
+            poppler-utils \
             curl ca-certificates unzip
           # Install Source Sans 3 and Source Code Pro fonts
           mkdir -p ~/.fonts
@@ -51,6 +52,11 @@ jobs:
 
       - name: Build resume
         run: ./build_resume.sh example/resume.md
+
+      - name: Validate all outputs
+        run: |
+          pip3 install python-docx -q
+          ./validate_outputs.py example/resume.md
 
       - name: Copy demo PDF to tracked location
         run: cp dist/resume.pdf example/resume.pdf
@@ -95,6 +101,7 @@ jobs:
         with:
           context: .
           push: true
+          no-cache: true
           tags: |
             ${{ env.DOCKER_IMAGE }}:latest
             ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
