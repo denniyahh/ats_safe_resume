@@ -62,6 +62,8 @@ class PandocPdfRenderer(BaseRenderer):
             else:
                 cmd += ["-V", "fontsize=10pt", "-V", "geometry:left=0.7in,right=0.7in,top=0.5in,bottom=0.5in"]
 
+            cmd += ["-V", "linkcolor=blue"]
+
             # Crafted footer
             if resume.crafted_footer:
                 cmd += ["--include-after-body", str(SCRIPT_DIR / "crafted-footer.tex")]
