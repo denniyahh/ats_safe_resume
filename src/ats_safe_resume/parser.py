@@ -201,6 +201,10 @@ def _parse_companies(lines: list[str]) -> list[Company]:
                 company.name = parts[0].strip()
                 if len(parts) > 1:
                     company.location = parts[1].strip()
+                # Extract URL from embedded markdown link: [text](url)
+                url_m = re.search(r'\[([^\]]+)\]\(([^)]+)\)', heading)
+                if url_m:
+                    company.url = url_m.group(2)
             # Clean any remaining markdown link syntax: [text](url) → text
             company.name = _strip_markdown_links(company.name)
             if company.location:
@@ -221,6 +225,14 @@ def _parse_companies(lines: list[str]) -> list[Company]:
                 _parse_bullets_and_summary(lines, i+1, skip_to, current_company.positions[-1])
                 i = skip_to
                 continue
+        # Non-bold, non-bullet line = inline position (e.g. Earlier Experience format)
+        elif line.strip() and not line.strip().startswith('-') and not line.strip().startswith('*') and current_company is not None and current_company.name and line[0].isupper():
+            pos = _parse_position_line(line, lines, i)
+            current_company.positions.append(pos)
+            skip_to = _find_next_position_or_end(lines, i)
+            _parse_bullets_and_summary(lines, i+1, skip_to, current_company.positions[-1])
+            i = skip_to
+            continue
         i += 1
 
     return companies
@@ -247,9 +259,32 @@ def _parse_position_line(line: str, lines: list[str], i: int) -> Position:
         # Remaining text might be subtitle
         if rest:
             if rest.startswith('—') or rest.startswith('–') or rest.startswith('-'):
-                pos.subtitle = rest[1:].strip()
+                subtitle_add = rest[1:].strip()
             else:
-                pos.subtitle = rest
+                subtitle_add = rest
+            if pos.subtitle:
+                # Append to existing subtitle (don't overwrite)
+                pos.subtitle = pos.subtitle + " " + subtitle_add
+            else:
+                pos.subtitle = subtitle_add
+
+    else:
+        # No bold at start — treat whole line as inline position text
+        # Format: Title — Company/Subtitle (dates) description
+        stripped = line.strip()
+        # Split on first bold group if present in the middle: Title — **Company** (dates) desc
+        bold_m = re.search(r'\*\*(.+?)\*\*', stripped)
+        if bold_m:
+            before = stripped[:bold_m.start()].strip().rstrip('—–-').strip()
+            after = stripped[bold_m.end():].strip()
+            pos.title = before
+            pos.subtitle = f"{bold_m.group(1)} {after}".strip()
+        else:
+            # No bold at all — split on first em/en dash for title
+            parts = re.split(r'\s*[—–]\s*', stripped, maxsplit=1)
+            pos.title = parts[0].strip()
+            if len(parts) > 1:
+                pos.subtitle = parts[1].strip()
 
     return pos
 
