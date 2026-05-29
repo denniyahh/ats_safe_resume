@@ -24,9 +24,26 @@ def _escape_typst(text: str) -> str:
     return text
 
 
+def _escape_typst_all(text: str) -> str:
+    """Escape all Typst-special characters including * and _.
+    Used for plain-text fields that don't go through to_typst().
+    """
+    text = _escape_typst(text)
+    for ch in "*_`":
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
 def _e(text: str) -> str:
     """Shortcut: escape then convert inline markdown."""
     return inline_md.to_typst(_escape_typst(text))
+
+
+def _esafe(text: str | None) -> str:
+    """Escape text or return empty string for None."""
+    if text is None:
+        return ""
+    return _escape_typst_all(text)
 
 
 class PdfRenderer(BaseRenderer):
@@ -55,15 +72,15 @@ class PdfRenderer(BaseRenderer):
 
         # Name
         if resume.name:
-            lines.append(f'#align(center, text(size: 18pt, weight: "bold")[{_escape_typst(resume.name)}])')
+            lines.append(f'#align(center, text(size: 18pt, weight: "bold")[{_esafe(resume.name)}])')
 
         # Title line
         if resume.title_line:
-            lines.append(f'#align(center, text(size: 11pt, weight: "semibold")[{_escape_typst(resume.title_line)}])')
+            lines.append(f'#align(center, text(size: 11pt, weight: "semibold")[{_esafe(resume.title_line)}])')
 
         # Contact
         if resume.contact:
-            contact_text = _escape_typst(resume.contact.to_ats_string())
+            contact_text = _esafe(resume.contact.to_ats_string())
             lines.append(f"#align(center, text(size: 9pt)[{contact_text}])")
 
         lines.append("")
@@ -84,14 +101,14 @@ class PdfRenderer(BaseRenderer):
             lines.append("")
             for company in resume.companies:
                 for position in company.positions:
-                    loc = f" — {_escape_typst(company.location)}" if company.location else ""
-                    lines.append(f"== {_escape_typst(company.name)}{loc}")
+                    loc = f" — {_esafe(company.location)}" if company.location else ""
+                    lines.append(f"== {_esafe(company.name)}{loc}")
 
-                    title_line = f"*{_escape_typst(position.title)}*"
+                    title_line = f"*{_esafe(position.title)}*"
                     if position.subtitle:
-                        title_line += f" — {_escape_typst(position.subtitle)}"
+                        title_line += f" — {_esafe(position.subtitle)}"
                     if position.start_date:
-                        dates = f"({_escape_typst(position.start_date)} – {_escape_typst(position.end_date) or 'Present'})"
+                        dates = f"({_esafe(position.start_date)} – {_esafe(position.end_date) or 'Present'})"
                         title_line += f" _{dates}_"
                     lines.append(f"#text(size: 10pt)[{title_line}]")
 
@@ -106,19 +123,19 @@ class PdfRenderer(BaseRenderer):
         if resume.technical_skills:
             lines.append("= Technical Skills")
             for skill in resume.technical_skills:
-                cat = _escape_typst(skill.category)
-                skills_text = _escape_typst(skill.skills)
+                cat = _esafe(skill.category)
+                skills_text = _esafe(skill.skills)
                 lines.append(f"#text(size: 10pt)[*{cat}:* {skills_text}]")
             lines.append("")
 
         if resume.education:
             lines.append("= Education")
             for edu in resume.education:
-                edu_text = f"*{_escape_typst(edu.institution)}*"
+                edu_text = f"*{_esafe(edu.institution)}*"
                 if edu.degree:
-                    edu_text += f" — {_escape_typst(edu.degree)}"
+                    edu_text += f" — {_esafe(edu.degree)}"
                 if edu.details:
-                    edu_text += f", {_escape_typst(edu.details)}"
+                    edu_text += f", {_esafe(edu.details)}"
                 lines.append(f"#text(size: 10pt)[{edu_text}]")
             lines.append("")
 
