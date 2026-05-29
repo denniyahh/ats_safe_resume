@@ -37,8 +37,10 @@ def test_v1_v2_json_match():
     assert v1_data["basics"]["name"] == v2_data["basics"]["name"], \
         f"Name mismatch: v1={v1_data['basics']['name']} v2={v2_data['basics']['name']}"
     # v2 may have additional fields (label, location, url) that v1 doesn't
-    assert len(v1_data.get("work", [])) == len(v2_data.get("work", [])), \
-        f"Work count mismatch: v1={len(v1_data.get('work',[]))} v2={len(v2_data.get('work',[]))}"
+    # v1 grouped by company (non-standard), v2 groups by position (standard JSON Resume)
+    v1_positions_count = sum(len(c.get("positions", [])) for c in v1_data.get("work", []))
+    assert v1_positions_count == len(v2_data.get("work", [])), \
+        f"Work positions count mismatch: v1={v1_positions_count} v2={len(v2_data.get('work',[]))}"
 
 
 def test_v1_v2_pdf_contains_same_name():

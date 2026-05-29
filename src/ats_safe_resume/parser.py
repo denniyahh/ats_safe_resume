@@ -127,6 +127,11 @@ def _join_paragraphs(lines: list[str]) -> str:
     return text
 
 
+def _strip_markdown_links(text: str) -> str:
+    """Convert [text](url) and [text][ref] to just text."""
+    return re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+
+
 # ---------- contact parsing ----------
 
 def _parse_contact(line: str) -> ContactInfo:
@@ -183,18 +188,23 @@ def _parse_companies(lines: list[str]) -> list[Company]:
         if line.startswith('### '):
             heading = line[4:].strip()
             company = Company(name="")  # name set below
-            # Extract URL from markdown link
+            # Extract URL from markdown link at start of heading: [Name](URL) — Location
             m = re.match(r'\[(.+?)\]\((.+?)\)\s*[—–-]\s*(.+)', heading)
             if m:
                 company.name = m.group(1)
                 company.url = m.group(2)
                 company.location = m.group(3).strip()
             else:
-                # Name — Location
-                parts = re.split(r'\s*[—–-]\s*', heading, maxsplit=1)
+                # Name — Location (may contain markdown links inline)
+                # Only split on em/en dash or spaced hyphen (not word-internal hyphens)
+                parts = re.split(r'\s*[—–]\s*|\s+-\s+', heading, maxsplit=1)
                 company.name = parts[0].strip()
                 if len(parts) > 1:
                     company.location = parts[1].strip()
+            # Clean any remaining markdown link syntax: [text](url) → text
+            company.name = _strip_markdown_links(company.name)
+            if company.location:
+                company.location = _strip_markdown_links(company.location)
             current_company = company
             companies.append(company)
             i += 1

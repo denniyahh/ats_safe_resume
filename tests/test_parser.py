@@ -81,3 +81,27 @@ def test_parse_html_comments():
     resume = parse(md)
     assert resume.executive_profile is not None
     assert "secret" not in resume.executive_profile
+
+
+def test_parse_company_with_inline_markdown_link():
+    """Company name containing [text](url) should have URL stripped."""
+    md = """---
+theme: dark
+---
+
+# Test
+**Engineer**
+
+## Professional Experience
+
+### OldCorp (now [NewCorp](https://newcorp.com)) — New York, NY
+**Developer** — Platform
+*2020 – Present*
+- Did stuff
+"""
+    resume = parse(md)
+    assert len(resume.companies) == 1
+    assert resume.companies[0].name == "OldCorp (now NewCorp)"
+    assert "[" not in resume.companies[0].name
+    assert "]" not in resume.companies[0].name
+    assert resume.companies[0].location == "New York, NY"
