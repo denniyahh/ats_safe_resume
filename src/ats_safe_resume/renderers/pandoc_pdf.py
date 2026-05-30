@@ -164,6 +164,8 @@ class PandocPdfRenderer(BaseRenderer):
                         end = position.end_date or "Present"
                         title_line += f" *{position.start_date} – {end}*"
                     lines.append(title_line)
+                    # blank line before bullets (markdown requires this)
+                    lines.append("")
 
                     # For Earlier Experience-style entries (no bullets, has summary):
                     # merge summary into same paragraph as title
@@ -173,7 +175,6 @@ class PandocPdfRenderer(BaseRenderer):
                         lines.append(position.summary)
 
                     if position.bullets:
-                        lines.append("")  # blank line before list
                         for bullet in position.bullets:
                             stripped = re.sub(r'\*\*(.+?)\*\*', r'**\1**', bullet)
                             lines.append(f"- {stripped}")
