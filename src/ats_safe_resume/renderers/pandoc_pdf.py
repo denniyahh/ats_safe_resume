@@ -159,7 +159,13 @@ class PandocPdfRenderer(BaseRenderer):
                 for position in company.positions:
                     title_line = f"**{position.title}**"
                     if position.subtitle:
-                        title_line += f" — **{position.subtitle}**"
+                        # Split subtitle into bold and non-bold parts
+                        # e.g. "Trillium Trading, LLC (2005–2007)" → bold company, plain dates
+                        m = re.match(r'^(.*?)\s*(\(\d{4}.*)', position.subtitle)
+                        if m:
+                            title_line += f" — **{m.group(1)}** {m.group(2)}"
+                        else:
+                            title_line += f" — **{position.subtitle}**"
                     if position.start_date:
                         end = position.end_date or "Present"
                         title_line += f" \\hfill \\textit{{{position.start_date} – {end}}}"
