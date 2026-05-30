@@ -162,7 +162,7 @@ class PandocPdfRenderer(BaseRenderer):
                         title_line += f" — **{position.subtitle}**"
                     if position.start_date:
                         end = position.end_date or "Present"
-                        title_line += f" *{position.start_date} – {end}*"
+                        title_line += f" \\hfill \\textit{{{position.start_date} – {end}}}"
                     lines.append(title_line)
                     # blank line before bullets (markdown requires this)
                     lines.append("")
