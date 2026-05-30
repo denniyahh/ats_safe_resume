@@ -178,6 +178,7 @@ class PandocPdfRenderer(BaseRenderer):
                         for bullet in position.bullets:
                             stripped = re.sub(r'\*\*(.+?)\*\*', r'**\1**', bullet)
                             lines.append(f"- {stripped}")
+                    lines.append("")  # blank after each position
 
                 lines.append("")  # blank line between companies
 
