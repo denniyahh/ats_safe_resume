@@ -155,7 +155,7 @@ class Resume(BaseModel):
                 work.append({
                     "name": company.name,
                     "location": company.location,
-                    "position": position.title,
+                    "position": position.title + (" — " + position.subtitle) if position.subtitle else position.title,
                     "url": company.url,
                     "startDate": self._normalize_date(position.start_date),
                     "endDate": self._normalize_date(position.end_date),

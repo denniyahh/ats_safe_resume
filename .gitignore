@@ -4,6 +4,9 @@ dist*/
 # Python
 __pycache__/
 *.egg-info/
+.pytest_cache/
+.hypothesis/
+.env
 
 # Temp files from ATS normalization
 *.tmp
@@ -28,3 +31,9 @@ Thumbs.db
 
 # Keep the example PDF committed for README preview
 # (overwritten by CI on each push)
+
+# LinkedIn sync
+linkedin_sync/node_modules/
+linkedin_sync/cookies/*
+!linkedin_sync/cookies/.gitkeep
+linkedin_sync/screenshots/

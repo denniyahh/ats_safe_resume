@@ -1,0 +1,20 @@
+{
+  "name": "linkedin-sync",
+  "version": "0.1.0",
+  "description": "Sync ats_safe_resume markdown resume to LinkedIn profile via Playwright browser automation",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dry-run": "node index.js --dry-run"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

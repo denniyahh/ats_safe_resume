@@ -21,7 +21,7 @@ from ats_safe_resume.models import (
     Resume, Theme, PageMode, ContactInfo,
     Company, Position, SkillCategory, Education,
 )
-from ats_safe_resume.renderers.pdf import PdfRenderer
+from ats_safe_resume.renderers import PdfRenderer
 from ats_safe_resume.renderers.docx import DocxRenderer
 from ats_safe_resume.renderers.html import HtmlRenderer
 from ats_safe_resume.renderers.txt import TxtRenderer

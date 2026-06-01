@@ -9,8 +9,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import yaml
-
 from ats_safe_resume.models import Resume
 from ats_safe_resume.renderers.base import BaseRenderer
 
@@ -18,7 +16,6 @@ SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 TEMPLATES_DIR = SCRIPT_DIR / "templates"
 THEMES_DIR = SCRIPT_DIR / "themes"
 PREAMBLE = SCRIPT_DIR / "resume-preamble.tex"
-PANDOC_DEFAULTS = SCRIPT_DIR / "pandoc-defaults.yaml"
 
 
 class PandocPdfRenderer(BaseRenderer):
@@ -104,11 +101,11 @@ class PandocPdfRenderer(BaseRenderer):
         if resume.contact:
             contact_parts = []
             if resume.contact.city_state:
-                contact_parts.append(resume.contact.city_state)
+                contact_parts.append(_escape_latex_special(resume.contact.city_state))
             if resume.contact.email:
                 contact_parts.append(f"[{resume.contact.email}](mailto:{resume.contact.email})")
             if resume.contact.phone:
-                contact_parts.append(resume.contact.phone)
+                contact_parts.append(_escape_latex_special(resume.contact.phone))
             if resume.contact.linkedin:
                 contact_parts.append(f"[LinkedIn]({resume.contact.linkedin})")
             if resume.contact.github:
@@ -121,7 +118,7 @@ class PandocPdfRenderer(BaseRenderer):
                 if m:
                     contact_parts.append(f"[{m.group(1)}]({m.group(2)})")
                 else:
-                    contact_parts.append(other)
+                    contact_parts.append(_escape_latex_special(other))
             lines.append(" · ".join(contact_parts))
             lines.append("")
 
@@ -129,14 +126,14 @@ class PandocPdfRenderer(BaseRenderer):
         if resume.executive_profile:
             lines.append("## Executive Profile")
             lines.append("")
-            lines.append(resume.executive_profile)
+            lines.append(_escape_latex_special(resume.executive_profile))
             lines.append("")
 
         # ── Core Expertise ───────────────────────────────────────
         if resume.core_expertise:
             lines.append("## Core Expertise")
             lines.append("")
-            lines.append(resume.core_expertise)
+            lines.append(_escape_latex_special(resume.core_expertise))
             lines.append("")
 
         # ── Professional Experience ──────────────────────────────
@@ -144,28 +141,25 @@ class PandocPdfRenderer(BaseRenderer):
             lines.append("## Professional Experience")
             lines.append("")
             for company in resume.companies:
-                heading = company.name
-                if company.location:
-                    heading += f" — {company.location}"
                 if company.url:
-                    lines.append(f"### [{company.name}]({company.url})"
-                                 f"{' — ' + company.location if company.location else ''}")
+                    lines.append(f"### [{_escape_latex_special(company.name)}]({company.url})"
+                                 f"{' — ' + _escape_latex_special(company.location) if company.location else ''}")
                 else:
                     # No primary URL — render name as-is (may contain inline markdown links)
-                    lines.append(f"### {company.name}"
-                                 f"{' — ' + company.location if company.location else ''}")
+                    lines.append(f"### {_escape_latex_special(company.name)}"
+                                 f"{' — ' + _escape_latex_special(company.location) if company.location else ''}")
                 lines.append("")
 
                 for position in company.positions:
-                    title_line = f"**{position.title}**"
+                    title_line = f"**{_escape_latex_special(position.title)}**"
                     if position.subtitle:
                         # Split subtitle into bold and non-bold parts
                         # e.g. "Trillium Trading, LLC (2005–2007)" → bold company, plain dates
                         m = re.match(r'^(.*?)\s*(\(\d{4}.*)', position.subtitle)
                         if m:
-                            title_line += f" — **{m.group(1)}** {m.group(2)}"
+                            title_line += f" — **{_escape_latex_special(m.group(1))}** {_escape_latex_special(m.group(2))}"
                         else:
-                            title_line += f" — **{position.subtitle}**"
+                            title_line += f" — **{_escape_latex_special(position.subtitle)}**"
                     if position.start_date:
                         end = position.end_date or "Present"
                         title_line += f" \\hfill \\textit{{{position.start_date} – {end}}}"
@@ -176,14 +170,14 @@ class PandocPdfRenderer(BaseRenderer):
                     # For Earlier Experience-style entries (no bullets, has summary):
                     # merge summary into same paragraph as title
                     if position.summary and not position.bullets:
-                        lines[-1] = lines[-1] + " " + position.summary
+                        lines[-2] = lines[-2] + " " + _escape_latex_special(position.summary)
                     elif position.summary:
-                        lines.append(position.summary)
+                        lines.append(_escape_latex_special(position.summary))
 
                     if position.bullets:
                         for bullet in position.bullets:
                             stripped = re.sub(r'\*\*(.+?)\*\*', r'**\1**', bullet)
-                            lines.append(f"- {stripped}")
+                            lines.append(f"- {_escape_latex_special(stripped)}")
                     lines.append("")  # blank after each position
 
                 lines.append("")  # blank line between companies
@@ -193,7 +187,7 @@ class PandocPdfRenderer(BaseRenderer):
             lines.append("## Technical Skills")
             lines.append("")
             for skill in resume.technical_skills:
-                lines.append(f"**{skill.category}:** {skill.skills}")
+                lines.append(f"**{_escape_latex_special(skill.category)}:** {_escape_latex_special(skill.skills)}")
                 lines.append("")
 
         # ── Education ────────────────────────────────────────────
@@ -201,15 +195,25 @@ class PandocPdfRenderer(BaseRenderer):
             lines.append("## Education")
             lines.append("")
             for edu in resume.education:
-                edu_line = f"**{edu.institution}**"
+                edu_line = f"**{_escape_latex_special(edu.institution)}**"
                 if edu.degree:
-                    edu_line += f" — {edu.degree}"
+                    edu_line += f" — {_escape_latex_special(edu.degree)}"
                 if edu.details:
-                    edu_line += f", {edu.details}"
+                    edu_line += f", {_escape_latex_special(edu.details)}"
                 lines.append(edu_line)
                 lines.append("")
 
         return "\n".join(lines).strip() + "\n"
+
+
+def _escape_latex_special(s: str) -> str:
+    """Escape backslashes so pandoc doesn't pass them through as TeX control sequences.
+
+    Pandoc's markdown parser passes literal backslashes through to LaTeX,
+    which then interprets them as undefined control sequences.
+    Doubling them (\\) makes pandoc output \\textbackslash{} instead.
+    """
+    return s.replace("\\", "\\\\")
 
 
 def _yml_escape(s: str) -> str:
@@ -218,6 +222,7 @@ def _yml_escape(s: str) -> str:
 
 
 def _md_escape(s: str) -> str:
-    """Escape markdown special characters in plain text fields."""
+    """Escape markdown/LaTeX special characters in plain text fields."""
+    s = _escape_latex_special(s)  # backslash → pandoc TeX control sequence
     s = s.replace("[", r"\[").replace("]", r"\]")
     return s

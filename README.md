@@ -1,35 +1,36 @@
 # ATS Safe Resume
 
 [![Built with Python](https://img.shields.io/badge/built%20with-python-blue)](https://python.org/)
-[![Typst](https://img.shields.io/badge/engine-typst-239DAD)](https://typst.app/)
+[![Pandoc+LaTeX](https://img.shields.io/badge/engine-Pandoc%2BLaTeX-4B8BBE)](https://pandoc.org/)
+[![Typst fallback](https://img.shields.io/badge/fallback-Typst-239DAD)](https://typst.app/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 A modern, programmatic resume template that produces clean PDFs that pass applicant tracking systems — without sacrificing design.
 
-**Edit one Markdown file. Get PDF, DOCX, HTML, plain text, and JSON Resume output. Zero-install path available via GitHub actions.**
+**Edit one Markdown file. Get PDF, DOCX, HTML, plain text, and JSON Resume output. Zero-install path available via GitHub Actions. Automated LinkedIn profile sync.**
 
 ![Example Resume](example/resume.pdf)
 
 ---
 
-## v2 Architecture (Current)
+## Architecture
 
-**Single-parse, multi-render pipeline.** The v1 pipeline ran 5 independent parses of the same markdown (Pandoc + bash regex), which caused format-specific bugs: title duplication, double-escaped HTML entities, overwritten dates, and invisible footers.
-
-**v2 fixes this for good:**
+**Single-parse, multi-render pipeline.** Parse once into a typed data model, then render to all output formats from the same canonical source.
 
 ```
-resume.md → Pydantic Parser → canonical JSON → Typst PDF / DOCX / HTML / TXT
-               (parse once)                         (dedicated renderers)
+resume.md → Pydantic Parser → canonical JSON → Pandoc/LaTeX PDF (Eisvogel)
+                                               ├─ Typst PDF (fallback, if no Pandoc)
+                                               ├─ DOCX / HTML / TXT / JSON Resume
+                                               └─ LinkedIn profile (Playwright automation)
 ```
 
-| Before (v1) | After (v2) |
+| Decision | Rationale |
 |---|---|
-| 5 independent parses (Pandoc + bash) | 1 parse into a typed data model |
-| LaTeX engine (~1.5GB install) | Typst (~30MB, deterministic output) |
-| Format-specific bugs compound | One fix in the data model fixes all formats |
-| Manual output validation | Automated property-based testing |
+| Pandoc + LuaLaTeX + Eisvogel (primary PDF) | Pixel-perfect v1 layout match, link color=blue, footer styling |
+| Typst (fallback PDF) | ~30MB install, deterministic output — for CI / Docker / quick builds |
+| Single markdown source | One fix in the data model fixes all outputs |
+| Property-based testing | Automated validation across all renderers |
 
 Full architecture: [ARCHITECTURE_V2.md](ARCHITECTURE_V2.md) · Implementation plan: [PLAN_PHASE1.md](PLAN_PHASE1.md)
 
@@ -44,16 +45,15 @@ Full architecture: [ARCHITECTURE_V2.md](ARCHITECTURE_V2.md) · Implementation pl
 3. Commit your changes
 4. Go to **Actions** → click the latest workflow → download `resume.pdf` from the artifacts
 
-That's it. GitHub Actions builds everything automatically. No software to install.
+That's it. GitHub Actions builds everything automatically (using the Typst fallback — no LaTeX needed in CI).
 
 ---
 
 ## Quick Start — Docker (Local Build)
 
-If you want to build locally without installing LaTeX:
+Build locally without installing Pandoc or LaTeX:
 
 ```bash
-# Build your resume with one command
 docker run --rm -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest /data/resume.md
 ```
 
@@ -61,7 +61,12 @@ docker run --rm -v "$(pwd):/data" ghcr.io/denniyahh/ats_safe_resume:latest /data
 
 ## Quick Start — Native (Local Build)
 
+For pixel-perfect PDF output matching the example:
+
 ```bash
+# Prerequisites: Pandoc + TeX Live (LuaLaTeX + Eisvogel template)
+# Install: sudo dnf install pandoc texlive-scheme-full
+
 # Install Python dependencies
 pip install -e .
 
@@ -74,6 +79,60 @@ ats-safe-resume resume.md
 # Outputs in dist/
 ls dist/   # resume.pdf  resume.docx  resume.html  resume.txt  resume.json
 ```
+
+If Pandoc/LaTeX isn't available, the Typst fallback kicks in automatically for PDF generation.
+
+---
+
+## LinkedIn Profile Sync
+
+Keep your LinkedIn profile in sync with your resume — no copy-paste, no manual edits.
+
+```
+resume.md → parse → map → LinkedIn profile
+                           ├─ Headline
+                           ├─ About
+                           ├─ Positions (exact mirror)
+                           ├─ Skills (add-only)
+                           └─ Education (exact mirror)
+```
+
+### Setup
+
+```bash
+cd linkedin_sync
+npm install
+npx playwright install chromium
+```
+
+### Usage
+
+```bash
+# Dry run — prints what would change without touching LinkedIn
+node index.js --dry-run
+
+# Live sync
+node index.js
+
+# Custom resume path
+node index.js --resume /path/to/your/resume.md
+```
+
+### How it works
+
+- **Headful browser** — you see everything happening. On first run, log in manually; session is saved to `cookies/` and reused.
+- **Selector validation** — before any edits, validates all selectors against LinkedIn's live DOM. Sections with broken selectors are skipped with screenshots for debugging.
+- **Exact mirror** — positions and education are matched by company+title and school+degree. Missing entries are added, existing ones are updated, and LinkedIn-only entries (not in resume source) are deleted.
+- **Anti-detection** — `playwright-extra` + stealth plugin, realistic delays, persistent browser context.
+- **Delete handling** — confirmation dialogs are bypassed via DOM manipulation (LinkedIn overlays intercept pointer events on dialog buttons).
+
+### Limitations
+
+- LinkedIn's DOM changes frequently — the validation layer detects breakage, but selectors need manual updates when they change
+- Skills are add-only (LinkedIn has a 50-skill cap)
+- Dates are best-effort — LinkedIn's date pickers vary by locale
+
+See [linkedin_sync/README.md](linkedin_sync/README.md) for full details.
 
 ---
 
@@ -113,7 +172,8 @@ geometry: "left=0.7in,right=0.7in,top=0.5in,bottom=0.5in"
 
 | Format | File | Use Case |
 |--------|------|----------|
-| **PDF** | `resume.pdf` | Applications, email, print |
+| **PDF** (Pandoc) | `resume.pdf` | Applications, email, print — pixel-perfect Eisvogel template |
+| **PDF** (Typst) | `resume.pdf` | Fallback when Pandoc unavailable — near-identical output |
 | **DOCX** | `resume.docx` | Job portals requiring Word format (styled via `reference.docx`) |
 | **HTML** | `resume.html` | Web preview, personal site |
 | **Plain Text** | `resume.txt` | Simple ATS portals, plain-text forms |
@@ -149,33 +209,39 @@ The AI can help with:
 
 ATS (Applicant Tracking Systems) parse resumes by extracting text from PDFs. Many beautiful templates produce PDFs that extract as garbled text — special characters become unrecognizable, section headers get merged, and bullet points disappear.
 
-This template ensures ATS safety in two ways:
+This template ensures ATS safety through typography normalization: typographic characters (en/em dashes, middle dots, non-breaking spaces, curly quotes) are replaced with plain ASCII equivalents. The visual-copy PDF and ATS-safe PDF are the same file — clean text extraction with professional typography.
 
-1. **Typography normalization** — By default (`ATS_SAFE=1`), the PDF is built from a normalized copy where typographic characters (en/em dashes, middle dots, non-breaking spaces, curly quotes) are replaced with plain ASCII equivalents.
-2. **Clean text extraction** — Section headers use standard names (Executive Profile, Professional Experience, Education) that ATS parsers recognize.
-
-You can disable normalization for the visual-copy PDF:
-
-```bash
-ATS_SAFE=0 ./build_resume.sh
-```
+Section headers use standard names (Executive Profile, Professional Experience, Education) that ATS parsers recognize.
 
 ---
 
 ## Dependencies
 
-### Native (v2 — Python + Typst)
+### Native (Pandoc/LaTeX — pixel-perfect output)
 
 | Tool | Required | Notes |
 |------|----------|-------|
 | Python 3.10+ | ✅ | Parser, renderers, CLI |
-| `typst` (Python pkg) | ✅ | PDF generation (~30MB) |
-| `pydantic` | ✅ | Data model |
-| `python-docx` | ✅ | DOCX generation |
-| `jinja2` | ✅ | HTML/TXT templates |
-| `pyyaml` | ✅ | Frontmatter parsing |
+| Pandoc 3+ | ✅ | Markdown → LaTeX conversion |
+| TeX Live (LuaLaTeX) | ✅ | PDF engine |
+| Eisvogel template | ✅ | LaTeX template for layout |
 | Source Sans 3 | ✅ | Primary font |
 | Source Code Pro | ✅ | Monospace font |
+
+Native fallback (Typst — if Pandoc unavailable):
+
+| Tool | Required | Notes |
+|------|----------|-------|
+| `typst` (Python pkg) | ⬜ | PDF generation (~30MB) |
+
+Python packages:
+
+| Package | Notes |
+|---------|-------|
+| `pydantic` | Data model |
+| `python-docx` | DOCX generation |
+| `jinja2` | HTML/TXT templates |
+| `pyyaml` | Frontmatter parsing |
 
 Install: `pip install -e .` (from the repo root).
 
@@ -195,13 +261,20 @@ ats_safe_resume/
 ├── src/ats_safe_resume/
 │   ├── models.py            # Pydantic data model
 │   ├── parser.py            # Markdown parser
-│   ├── renderers/           # PDF, DOCX, HTML, TXT, JSON renderers
+│   ├── renderers/           # PDF (Pandoc + Typst fallback), DOCX, HTML, TXT, JSON
 │   ├── cli.py               # CLI entry point
 │   └── templates/           # Jinja2 templates
+├── linkedin_sync/           # LinkedIn profile automation
+│   ├── index.js             # CLI entry point
+│   ├── lib/
+│   │   ├── linkedin.js      # Playwright automation + LinkedIn DOM
+│   │   ├── mapper.js        # Resume → LinkedIn field mapping
+│   │   └── parser.js        # Python parser integration
+│   └── README.md
 ├── tests/
-│   └── ...                  # Unit + integration tests
+│   └── ...                  # Unit + integration + property-based tests
 ├── build_resume.sh          # Build script
-├── Dockerfile               # Docker image (python:3.12-slim + typst)
+├── Dockerfile               # Docker image
 ├── AI_INSTRUCTIONS.md       # AI assistant instructions
 ├── .github/workflows/
 │   └── build.yml            # CI: builds PDF + publishes Docker image
@@ -232,13 +305,16 @@ FORMATS=pdf,json ./build_resume.sh
 ## FAQ / Troubleshooting
 
 **Q: The PDF looks different from the example.**
-A: Most likely a missing font. Install Source Sans 3 and Source Code Pro, or use the Docker build.
+A: Most likely a missing font or Pandoc/LaTeX not installed. Install Source Sans 3 and Source Code Pro, or use the Docker build.
 
 **Q: Font "Source Sans 3" not found error.**
 A: Install the fonts (see Dependencies). Use the Docker build to avoid font issues entirely.
 
 **Q: Build fails with import errors.**
 A: Run `pip install -e .` from the repo root to install all Python dependencies.
+
+**Q: Build fails with Pandoc/LaTeX errors.**
+A: The Typst fallback activates automatically. Or install Pandoc + TeX Live for the pixel-perfect Eisvogel output.
 
 **Q: Can I use a different font?**
 A: Yes — set `mainfont` and `monofont` in the YAML frontmatter. The font must be installed on your system (or in the Docker image).
@@ -259,7 +335,5 @@ A: The DOCX output is designed for ATS uploads, not visual presentation. For a s
 MIT — free to use, modify, and distribute. See [LICENSE](LICENSE).
 
 ---
-
-## ATS Safe Resume
 
 Built by [Dennis Kim](https://github.com/denniyahh). Contributions welcome!
